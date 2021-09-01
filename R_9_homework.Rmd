@@ -1,0 +1,41 @@
+---
+title: "Homework 9"
+author: "Stefan Konigorski"
+date: "December 16, 2019"
+output:
+  html_document: default
+---
+
+Download this R Markdown file, save it on your computer, and perform all the below tasks by inserting your answer in text or by inserting R chunks below. After you are done, upload this file with your solutions on Moodle.
+
+## Exercise 1: Assumptions of linear regression
+
+Load the KiGGS dataset and compute the regression predicting BMI by the amount and frequency of eating pancakes:
+
+```{r}
+# load data
+dat_link <- url("https://www.dropbox.com/s/nbh0f6upejh7nr8/data.RData?dl=1")
+load(dat_link)
+dat <- KiGGS03_06
+
+# variables and formatting
+bmi <- dat$bmiB
+pancake_amount <- dat$fq41a
+pancake_amount <- factor(pancake_amount, labels = c("never", "1/4 piece or less", "1/2 piece", "1 piece", "2 pieces", "3 pieces or more"))
+pancake_freq <- dat$fq41
+pancake_freq <- droplevels(pancake_freq)
+pancake_freq <- factor(pancake_freq, labels = c("never", "1x/month", "2-3x/month", "1-2x/week", "3-4x/week", "5-6x/week", "1x/day", "2-3x/day", "4-5x/day"))
+
+# Regression:
+fit1 <- lm(bmi ~ as.numeric(pancake_amount) + as.numeric(pancake_freq))
+```
+
+In this model, investigate and judge whether the assumptions listed on slide 17 are satisfied.
+
+## Exercise 2: Model selection in linear regression
+
+In the KiGGS dataset, aim to select relevant predictors for sys12 (systolic blood pressure). Use 2 of the model selection approaches described on slide 31, apply them to the KiGGS dataset and compare the results.
+
+## Exercise 3: Linear regression with multiple imputation (optional)
+
+Run the code in the Rmd file R_9d_linear_regression_MI.Rmd, inspect the R code what it is doing, and look at the results. Apply the same to another linear regression model of your choice.

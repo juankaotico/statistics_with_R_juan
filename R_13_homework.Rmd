@@ -1,0 +1,13 @@
+---
+title: "Homework 13"
+author: "Stefan Konigorski"
+date: "January 27, 2020"
+output:
+  html_document: default
+---
+
+Download this R Markdown file, save it on your computer, and perform all the below tasks by inserting your answer in text or by inserting R chunks below. After you are done, upload this file with your solutions on Moodle.
+
+## Exercise 1: Survival analysis
+
+Choose one other provided dataset in the survival package (or any other suitable dataset) which contains time-to-event data. Use the survfit function to compute the Kaplan-Meier estimate of the survival function and plot it. Then choose a variable with 2 or more categories in the dataset and perform a log-rank test. Interpret the results: is there are difference in survival between the groups?

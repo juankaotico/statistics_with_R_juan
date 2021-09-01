@@ -1,0 +1,305 @@
+---
+title: "Exercises 3b - Solutions"
+author: "Stefan Konigorski"
+date: "November 4, 2019"
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+
+# Exercise 1: Tables
+
+```{r}
+# Load data
+load(file = url("https://www.dropbox.com/s/j50z4e17l5aabk8/Pima_diabetes.RData?dl=1"))
+Pima_diabetes$Diabetes <- factor(Pima_diabetes$Outcome, labels = c("no", "yes"))
+```
+
+Now create custom tables using the qwraps2 package.
+
+Note: need the **results = "asis"** statement when starting the R chunk so that the tables that are specially formatted by the **qwraps2** package are displayed correctly in the knitted output file:
+
+First small example table:
+
+```{r, results = "asis"}
+# install.packages("qwraps2")
+library(qwraps2)
+options(qwraps2_markup = "markdown")
+
+our_summary0 <-
+  list("Diabetes" =
+       list("yes" = ~ qwraps2::n_perc0(.data$Diabetes == "yes", show_symbol = TRUE, na_rm = TRUE),
+            "no"  = ~ qwraps2::n_perc0(.data$Diabetes == "no", show_symbol = TRUE, na_rm = TRUE))
+       )
+summary_table(Pima_diabetes, our_summary0)
+```
+
+Now a longer table with more details: 
+
+```{r, results = "asis"}
+our_summary1 <-
+  list("Diabetes" =
+       list("yes" = ~ qwraps2::n_perc0(.data$Diabetes == "yes", show_symbol = TRUE, na_rm = TRUE),
+            "no"  = ~ qwraps2::n_perc0(.data$Diabetes == "no", show_symbol = TRUE, na_rm = TRUE)),
+       "Number of pregnancies" =
+       list("0" = ~ qwraps2::n_perc0(.data$Pregnancies == 0, show_symbol = TRUE, na_rm = TRUE),
+            "1" = ~ qwraps2::n_perc0(.data$Pregnancies == 1, show_symbol = TRUE, na_rm = TRUE),
+            "2"  = ~ qwraps2::n_perc0(.data$Pregnancies == 2, show_symbol = TRUE, na_rm = TRUE),
+            "3"  = ~ qwraps2::n_perc0(.data$Pregnancies == 3, show_symbol = TRUE, na_rm = TRUE),
+            "4"  = ~ qwraps2::n_perc0(.data$Pregnancies == 4, show_symbol = TRUE, na_rm = TRUE),
+            "5"  = ~ qwraps2::n_perc0(.data$Pregnancies == 5, show_symbol = TRUE, na_rm = TRUE),
+            "6"  = ~ qwraps2::n_perc0(.data$Pregnancies == 6, show_symbol = TRUE, na_rm = TRUE),
+            "7"  = ~ qwraps2::n_perc0(.data$Pregnancies == 7, show_symbol = TRUE, na_rm = TRUE),
+            "8"  = ~ qwraps2::n_perc0(.data$Pregnancies == 8, show_symbol = TRUE, na_rm = TRUE),
+            "9"  = ~ qwraps2::n_perc0(.data$Pregnancies == 9, show_symbol = TRUE, na_rm = TRUE),
+            "10"  = ~ qwraps2::n_perc0(.data$Pregnancies == 10, show_symbol = TRUE, na_rm = TRUE),
+            "11"  = ~ qwraps2::n_perc0(.data$Pregnancies == 11, show_symbol = TRUE, na_rm = TRUE),
+            "12"  = ~ qwraps2::n_perc0(.data$Pregnancies == 12, show_symbol = TRUE, na_rm = TRUE),
+            "13"  = ~ qwraps2::n_perc0(.data$Pregnancies == 13, show_symbol = TRUE, na_rm = TRUE),
+            "14"  = ~ qwraps2::n_perc0(.data$Pregnancies == 14, show_symbol = TRUE, na_rm = TRUE),
+            "15"  = ~ qwraps2::n_perc0(.data$Pregnancies == 15, show_symbol = TRUE, na_rm = TRUE),
+            "16"  = ~ qwraps2::n_perc0(.data$Pregnancies == 16, show_symbol = TRUE, na_rm = TRUE),
+            "17"  = ~ qwraps2::n_perc0(.data$Pregnancies == 17, show_symbol = TRUE, na_rm = TRUE))
+       )
+
+table1 <- summary_table(Pima_diabetes, our_summary1)
+table1
+
+# group number of pregnancies in categories in the table, add descriptives for other variables: mean & SD, median and IQR for age
+our_summary2 <-
+  list("Diabetes" =
+       list("yes" = ~ qwraps2::n_perc0(.data$Diabetes == "yes", show_symbol = TRUE, na_rm = TRUE),
+            "no"  = ~ qwraps2::n_perc0(.data$Diabetes == "no", show_symbol = TRUE, na_rm = TRUE)),
+       "Number of pregnancies" =
+       list("0-1" = ~ qwraps2::n_perc0(.data$Pregnancies < 2, show_symbol = TRUE, na_rm = TRUE),
+            "2-3"  = ~ qwraps2::n_perc0(.data$Pregnancies %in% 2:3, show_symbol = TRUE, na_rm = TRUE),
+            "4-6"  = ~ qwraps2::n_perc0(.data$Pregnancies %in% 4:6, show_symbol = TRUE, na_rm = TRUE),
+            "7-17"  = ~ qwraps2::n_perc0(.data$Pregnancies %in% 7:17, show_symbol = TRUE, na_rm = TRUE)),
+       "Age" =
+       list("Median (IQR)" = ~ median_iqr(.data$Age)),
+       "BMI" =
+       list("Mean (SD)" = ~ qwraps2::mean_sd(.data$BMI, denote_sd = "paren", na_rm = TRUE, show_n = "never")),
+       "Blood Pressure" =
+       list("Mean (SD)" = ~ qwraps2::mean_sd(.data$BloodPressure, denote_sd = "paren", na_rm = TRUE, show_n = "never")),
+       "Glucose" =
+       list("Mean (SD)" = ~ qwraps2::mean_sd(.data$Glucose, denote_sd = "paren", na_rm = TRUE, show_n = "never"))
+       )
+table2 <- summary_table(Pima_diabetes, our_summary2)
+table2
+```
+
+Quicker code to generate the same table:
+
+```{r, results = "asis"}
+library(dplyr)
+# This needs to reformat the Pregnancies variable first
+Pima_diabetes$Pregnancies2 <- as.factor(Pima_diabetes$Pregnancies)
+
+Pima_diabetes %>%
+  dplyr::select(.data$Diabetes, .data$Pregnancies2) %>%
+  summary_table(.)
+```
+
+Generate stratified tables:
+
+```{r, results = "asis"}
+our_summary3 <-
+  list("Number of pregnancies" =
+       list("0-1" = ~ qwraps2::n_perc0(.data$Pregnancies < 2, show_symbol = TRUE, na_rm = TRUE),
+            "2-3"  = ~ qwraps2::n_perc0(.data$Pregnancies %in% 2:3, show_symbol = TRUE, na_rm = TRUE),
+            "4-6"  = ~ qwraps2::n_perc0(.data$Pregnancies %in% 4:6, show_symbol = TRUE, na_rm = TRUE),
+            "7-17"  = ~ qwraps2::n_perc0(.data$Pregnancies %in% 7:17, show_symbol = TRUE, na_rm = TRUE)),
+       "Age" =
+       list("Median (IQR)" = ~ median_iqr(.data$Age)),
+       "BMI" =
+       list("Mean (SD)" = ~ qwraps2::mean_sd(.data$BMI, denote_sd = "paren", na_rm = TRUE, show_n = "never")),
+       "Blood Pressure" =
+       list("Mean (SD)" = ~ qwraps2::mean_sd(.data$BloodPressure, denote_sd = "paren", na_rm = TRUE, show_n = "never")),
+       "Glucose" =
+       list("Mean (SD)" = ~ qwraps2::mean_sd(.data$Glucose, denote_sd = "paren", na_rm = TRUE, show_n = "never"))
+       )
+table3 <- summary_table(dplyr::group_by(Pima_diabetes, Diabetes), our_summary3)
+table3
+
+# add column with total and format a bit:
+table3_overall <- summary_table(Pima_diabetes, our_summary3)
+table3_both <- cbind(table3_overall, table3)
+
+print(table3_both,
+      rtitle = "Summary Statistics",
+      cnames = c("Overall \\ (N = 768)", "Diabetes \\ (N = 500)", "No Diabetes \\ (N = 268)"))
+```
+
+Create stratified table with **table1()** function in **table1** package:
+
+```{r}
+# This only seems to work when knitting to html, not to pdf or word
+# install.packages("table1")
+library(table1)
+table1::table1(~ Pregnancies + Age + BMI + BloodPressure + Glucose | Diabetes, data = Pima_diabetes)
+```
+
+# Exercise 2: Tables
+
+a) Add descriptive statistics for the **Insulin** variable to the above table generated by the summary_table function:
+
+```{r, results = "asis"}
+# since insulin levels are very skewed, take a log transformation. Also, set all values of 0 to missing
+Pima_diabetes$logInsulin <- Pima_diabetes$Insulin
+Pima_diabetes$logInsulin[Pima_diabetes$logInsulin == 0] <- NA
+Pima_diabetes$logInsulin <- log(Pima_diabetes$logInsulin)
+
+our_summary4 <-
+  list("Number of pregnancies" =
+       list("0-1" = ~ qwraps2::n_perc0(.data$Pregnancies < 2, show_symbol = TRUE, na_rm = TRUE),
+            "2-3"  = ~ qwraps2::n_perc0(.data$Pregnancies %in% 2:3, show_symbol = TRUE, na_rm = TRUE),
+            "4-6"  = ~ qwraps2::n_perc0(.data$Pregnancies %in% 4:6, show_symbol = TRUE, na_rm = TRUE),
+            "7-17"  = ~ qwraps2::n_perc0(.data$Pregnancies %in% 7:17, show_symbol = TRUE, na_rm = TRUE)),
+       "Age" =
+       list("Median (IQR)" = ~ median_iqr(.data$Age)),
+       "BMI" =
+       list("Mean (SD)" = ~ qwraps2::mean_sd(.data$BMI, denote_sd = "paren", na_rm = TRUE, show_n = "never")),
+       "Blood Pressure" =
+       list("Mean (SD)" = ~ qwraps2::mean_sd(.data$BloodPressure, denote_sd = "paren", na_rm = TRUE, show_n = "never")),
+       "Glucose" =
+       list("Mean (SD)" = ~ qwraps2::mean_sd(.data$Glucose, denote_sd = "paren", na_rm = TRUE, show_n = "never")),
+       "log Insulin" =
+       list("Mean (SD)" = ~ qwraps2::mean_sd(.data$logInsulin, denote_sd = "paren", na_rm = TRUE, show_n = "never"))
+       )
+table4 <- summary_table(dplyr::group_by(Pima_diabetes, Diabetes), our_summary4)
+table4
+```
+
+b) Generate a table including descriptive statistics of diabetes prevalence, age, BMI, blood pressure, glucose levels stratified by number of pregnancy quartiles.
+
+```{r}
+# preparation
+# compute quartiles first
+Preg_quantile <- quantile(Pima_diabetes$Pregnancies, seq(0, 1, 0.25))
+# Then create new variable
+Pima_diabetes$Pregnancy_4 <- 1
+Pima_diabetes$Pregnancy_4[(Pima_diabetes$Pregnancies > Preg_quantile[2]) & (Pima_diabetes$Pregnancies <= Preg_quantile[3])] <- 2
+Pima_diabetes$Pregnancy_4[(Pima_diabetes$Pregnancies > Preg_quantile[3]) & (Pima_diabetes$Pregnancies <= Preg_quantile[4])] <- 3
+Pima_diabetes$Pregnancy_4[Pima_diabetes$Pregnancies > Preg_quantile[4]] <- 4
+Pima_diabetes$Pregnancy_4 <- factor(Pima_diabetes$Pregnancy_4, labels = c("0-1 Pregn.", "2-3 Pregn.", "4-6 Pregn.", ">7 Pregn."))
+# view
+table(Pima_diabetes$Pregnancy_4)
+```
+
+Now compute the table: 
+
+```{r, results = "asis"}
+our_summary5 <-
+  list("Age" =
+       list("Median (IQR)" = ~ median_iqr(.data$Age)),
+       "BMI" =
+       list("Mean (SD)" = ~ qwraps2::mean_sd(.data$BMI, denote_sd = "paren", na_rm = TRUE, show_n = "never")),
+       "Blood Pressure" =
+       list("Mean (SD)" = ~ qwraps2::mean_sd(.data$BloodPressure, denote_sd = "paren", na_rm = TRUE, show_n = "never")),
+       "Glucose" =
+       list("Mean (SD)" = ~ qwraps2::mean_sd(.data$Glucose, denote_sd = "paren", na_rm = TRUE, show_n = "never"))
+       )
+table5 <- summary_table(dplyr::group_by(Pima_diabetes, Pregnancy_4), our_summary5)
+table5
+```
+
+# Exercise 3: Plots using ggplot2
+
+a) Overview of standard plots 
+
+```{r}
+# Load data
+load(file = url("https://www.dropbox.com/s/j50z4e17l5aabk8/Pima_diabetes.RData?dl=1"))
+Pima_diabetes$Diabetes <- factor(Pima_diabetes$Outcome, labels = c("no", "yes"))
+
+# install.packages("ggplot2")
+library(ggplot2)
+
+# Bar plot
+ggplot(data = Pima_diabetes, mapping = aes(x = Pregnancies)) + geom_bar()
+# same but in short:
+ggplot(Pima_diabetes, aes(Pregnancies)) + geom_bar()
+
+# Histogram
+ggplot(Pima_diabetes, aes(BMI)) + geom_histogram()
+
+# Histogram and smoothed kernel density estimate
+ggplot(Pima_diabetes, aes(BMI, stat(density))) + geom_histogram() + geom_density(col = "red")
+
+# Stratified smoothed kernel density estimate
+ggplot(Pima_diabetes, aes(BMI, col = Diabetes)) + geom_density(position = "stack")
+ggplot(Pima_diabetes, aes(BMI, fill = Diabetes)) + geom_density(position = "stack")
+
+# Stratified boxplot
+ggplot(Pima_diabetes, aes(Diabetes, BMI)) + geom_boxplot()
+
+# Scatterplot
+ggplot(Pima_diabetes, aes(BMI, Glucose)) + geom_point()
+
+# Scatterplot using color for third variable
+ggplot(Pima_diabetes, aes(BMI, Glucose, col = Diabetes)) + geom_point()
+
+# A bit more fancy and complicated scatterplots:
+ggplot(Pima_diabetes, aes(BMI, Glucose, col = Pregnancies)) + 
+  geom_point() + 
+  scale_colour_gradientn(colours = rainbow(4)) +
+  facet_wrap(~Diabetes)
+
+Pima_diabetes$ManyPregnancies <- Pima_diabetes$Pregnancies>=4
+Pima_diabetes$ManyPregnancies <- factor(Pima_diabetes$ManyPregnancies, labels = c("< 4 Pregnancies", ">= 4 Pregnancies"))
+ggplot(Pima_diabetes, aes(BMI, Glucose, col = ManyPregnancies)) + 
+  geom_point() +
+  facet_wrap(~Diabetes)
+```
+
+b) Generate the following plots
+
+* Produce a boxplot of BMI for each group of number of pregnancies
+* In the above scatterplot of BMI and glucose levels, add a regression line which describes the linear association between the two variables.
+
+```{r}
+Pima_diabetes$Pregnancies2 <- as.factor(Pima_diabetes$Pregnancies)
+ggplot(Pima_diabetes, aes(Pregnancies2, BMI)) + geom_boxplot()
+ggplot(Pima_diabetes, aes(BMI, Glucose)) + geom_point() + geom_smooth(method = "lm", se = TRUE)
+```
+
+# Exercise 4: Other cool packages and graphics in R
+
+The following two examples can only be knitted to html.
+
+Interactive maps: 
+
+```{r}
+# install.packages("leaflet")
+library(leaflet)
+
+m <- leaflet() %>% addTiles()
+
+m %>%
+  # Central Park
+  fitBounds(-73.9, 40.75, -73.95,40.8) %>%
+  addMeasure()
+
+m %>%
+  # Berlin, Germany
+  fitBounds(13.76134, 52.675499, 13.0884, 52.33812) %>%
+  addMeasure(
+    position = "bottomleft",
+    primaryLengthUnit = "meters",
+    primaryAreaUnit = "sqmeters",
+    activeColor = "#3D535D",
+    completedColor = "#7D4479")
+```
+
+Interactive ggplot2 plots:
+
+```{r}
+# install.packages("plotly")
+library(plotly)
+
+plot_BMI_glu_diab <- ggplot(Pima_diabetes, aes(BMI, Glucose, col = Diabetes)) + geom_point()
+plot_BMI_glu_diab_interactive <- ggplotly(plot_BMI_glu_diab)
+
+plot_BMI_glu_diab_interactive
+```

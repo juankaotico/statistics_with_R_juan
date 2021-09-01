@@ -1,0 +1,119 @@
+---
+title: "Mixed models 2 - Read and inspect hrs dataset"
+author: "Stefan Konigorski"
+date: "January 20, 2020"
+output:
+  html_document: default
+---
+
+```{r}
+library(readr)  # not necessary for loading of the dataset, only necessary to show labels and formatting of the dataset correctly
+dat_link <- url("https://www.dropbox.com/s/yox8fvt91ff73ye/hrs.RData?dl=1")
+load(dat_link)
+#load("C:/Users/stefan.konigorski/Desktop/data_Teaching/HRS/CogImp/hrs.RData")
+
+# Codebook: http://hrsonline.isr.umich.edu/modules/meta/xyear/cogimp/codebook/cogimp9214a_ri.htm
+# if you cannot access through this link, try: http://hrsonline.isr.umich.edu/modules/meta/xyear/cogimp/codebook/cogimp9216_00.html?_ga=2.32439230.1632035919.1574769911-792421365.1574769911 
+
+head(hrs)
+hrs[1:5,1:20]
+
+table(hrs$STUDY)
+#==========================================================================================
+#
+#STUDY          STUDY MEMBERSHIP
+#         Section: A     Level: Respondent      Type: Numeric    Width: 2   Decimals: 0
+#
+#         .................................................................................
+#         13234           1.  HRS
+#          7670          11.  AHEAD, including the AHEAD-AHEAD overlap case
+#           106          12.  HRS/AHEAD Overlap case, AHEAD, given to AHEAD after HRS Wave
+#                             1 [1992/1993], appeared in AHEAD
+#          2349          21.  CODA (Children of the Depression Age)
+#          2752          31.  WB (War Babies)
+#          4906          41.  EBB (Early Baby Boomers)
+#          5147          51.  MBB (Mid Baby Boomers)
+#             3          99.  Not yet cohort eligible
+#
+#==========================================================================================
+```
+
+```{r}
+# of interest: variable "Immediate Word Recall"
+
+# Preparations
+# rename variable at first timepoint
+names(hrs)[5] <- "R1IMRC"
+# define variable at second timepoint - Integrate the variables R2AIMRC10 and R2HIMRC20, which both capture different subgroups of the sample at the second timepoint.
+table(is.na(hrs$R2AIMRC10)) # -> only ~7000 of ~36000 observations
+table(is.na(hrs$R2HIMRC20)) # -> only ~10000 of ~36000 observations
+table(!is.na(hrs$R2HIMRC20) & !is.na(hrs$R2AIMRC10)) # -> no person has a value at both variables, i.e. the variables complement each other
+hrs$R2IMRC <- rowSums( cbind (hrs$R2AIMRC10, hrs$R2HIMRC20), na.rm=TRUE)
+hrs$R2IMRC[!(!is.na(hrs$R2HIMRC20) | !is.na(hrs$R2AIMRC10))] <- NA
+table(is.na(hrs$R2IMRC))
+# Rescale R1IMRC and R2IMRC onto the same scale as all other variables (measures 3-12 were on a scale of 1-10, measures 1-2 on the scale 1-20)
+hrs$R1IMRC <- hrs$R1IMRC/2
+hrs$R2IMRC <- hrs$R2IMRC/2
+```
+
+```{r}
+# Inspect variable "Immediate Word Recall"
+
+hist(hrs$R1IMRC)
+hist(hrs$R2IMRC)
+hist(hrs$R3IMRC)
+hist(hrs$R4IMRC)
+hist(hrs$R5IMRC)
+hist(hrs$R6IMRC)
+hist(hrs$R7IMRC)
+hist(hrs$R8IMRC)
+hist(hrs$R9IMRC)
+hist(hrs$R10IMRC)
+hist(hrs$R11IMRC)
+hist(hrs$R12IMRC)
+```
+
+```{r}
+# Extract variables for first investigation
+data_IMRC <- data.frame(HHID = hrs$HHID, PN = hrs$PN, HHID_PN = paste(hrs$HHID, hrs$PN, sep = "_"),
+                        T1 = hrs$R1IMRC, T2 = hrs$R2IMRC, T3 = hrs$R3IMRC, T4 = hrs$R4IMRC, T5 = hrs$R5IMRC, T6 = hrs$R6IMRC,
+                        T7 = hrs$R7IMRC, T8 = hrs$R8IMRC, T9 = hrs$R9IMRC, T10 = hrs$R10IMRC, T11 = hrs$R11IMRC, T12 = hrs$R12IMRC)
+
+# Look at data and trajectories
+head(data_IMRC)
+par(mfrow = c(2,3))
+plot(1:12, data_IMRC[1, 3:14], xlab = "Timepoint", main = "Person 1")
+plot(1:12, data_IMRC[2, 3:14], xlab = "Timepoint", main = "Person 2")
+plot(1:12, data_IMRC[3, 3:14], xlab = "Timepoint", main = "Person 3")
+plot(1:12, data_IMRC[4, 3:14], xlab = "Timepoint", main = "Person 4")
+plot(1:12, data_IMRC[5, 3:14], xlab = "Timepoint", main = "Person 5")
+plot(1:12, data_IMRC[6, 3:14], xlab = "Timepoint", main = "Person 6")
+```
+
+```{r}
+# Trajectories: nicer graphics with ggplot function, for this the dataset has to be formatted first
+# Preparation: transform dataset from wide to long format
+# install.packages("tidyr")
+library(tidyr)
+data_IMRC_long <- gather(data = data_IMRC, key = "time", value = "IMRC", T1:T12, factor_key=TRUE)
+# Also possible with:
+# data_IMRC_long <- reshape(data = data_IMRC, idvar = "HHID_PN", varying = names(data_IMRC)[4:15], v.names = "T", direction = "long")
+data_IMRC_long[1:15,]
+# Order dataset by HHID and time and not the other way around
+data_IMRC_long <- data_IMRC_long[order(data_IMRC_long$HHID_PN, data_IMRC_long$time),]
+rownames(data_IMRC_long) <- 1:nrow(data_IMRC_long)
+# Transform time into numeric variable
+data_IMRC_long$time <- as.numeric(data_IMRC_long$time)
+data_IMRC_long[1:15,]
+
+# Inspect trajectories of the first 100 observations (i.e. the first 9 persons)
+library(ggplot2)
+plot1 <- ggplot(data_IMRC_long[1:100,], aes(x = time, y = IMRC)) + 
+            geom_line(aes(group = HHID_PN, colour = HHID_PN)) + 
+            scale_x_continuous("Time", breaks = 1:12, minor_breaks = NULL, labels = 1:12)
+plot1
+
+# Save plot as pdf file.
+#ggsave("C:/Users/stefan.konigorski/Desktop/plot_traj.pdf", width = 20, height = 10, units = "cm")
+
+```

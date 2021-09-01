@@ -1,0 +1,193 @@
+---
+title: "Class 2 - exercises"
+author: "Stefan Konigorski"
+date: "October 28, 2019"
+output:
+  html_document: default
+---
+
+## Exercise 1: Practise working with R Markdown
+
+Inspect the R Markdown file R_1_homework_solution.Rmd and try to edit and knit it yourself to generate a html or Word output file.
+
+## Exercise 2: Check Pima diabetes dataset
+
+a) Run the following commands and inspect the results, in terms of what the functions are doing, and if the data values make sense and seem correct.
+
+```{r}
+# Load/import data (edit so that the path points to the file and folder where you have saved the Pima_diabetes.Rdata file on your laptop)
+load("C:/Users/stefan.konigorski/Desktop/data_Teaching/PimaIndians/Pima_diabetes.RData")
+
+# Alternatively: import the file from the following dropbox link:
+# Pima_diabetes <- read.csv(file = url("https://www.dropbox.com/s/4s4rhf6abda6gw2/Pima_diabetes.csv?dl=1"))
+
+# Check data frame in general
+str(Pima_diabetes)
+summary(Pima_diabetes)
+dim(Pima_diabetes)
+# how many observations:
+nrow(Pima_diabetes)
+# how many variables:
+ncol(Pima_diabetes) 
+
+# check single variables
+table(Pima_diabetes$Glucose)
+table(Pima_diabetes$Glucose == 0)
+table(Pima_diabetes$BMI < 10)
+table(Pima_diabetes$BMI <= 10)
+
+# more complicated checks
+table(!Pima_diabetes$Glucose == 0)
+table(Pima_diabetes$Glucose == 0 | Pima_diabetes$BMI == 10)
+table(Pima_diabetes$Glucose == 0 & Pima_diabetes$BMI == 10)
+```
+
+b) Answer the following questions (these are already computing some descriptive statistics)
+
+```{r}
+# How many women in the sample have diabetes?
+
+# How many women are older than 50 years?
+
+# Do all insulin values make sense?
+```
+
+c) Do some transformations (do at home)
+
+```{r}
+# check Glucose levels
+table(!Pima_diabetes$Glucose == 0)
+
+# transform variables
+Pima_diabetes$Glucose[Pima_diabetes$Glucose == 0] <- NA
+
+# check again:
+table(!Pima_diabetes$Glucose == 0)
+Pima_diabetes$Glucose[!is.na(Pima_diabetes$Glucose)]
+```
+
+d) Some small tidyverse example (do at home)
+
+```{r}
+# install.packages(dplyr)
+library(dplyr)
+
+# Compute average BMI of those women with more than 10 pregnancies
+Pima_diabetes %>%
+	dplyr::select(Pregnancies, BMI) %>% 
+	dplyr::filter(Pregnancies > 10) %>%
+	dplyr::summarize(avg_BMI_high_Preg = mean(BMI), n = n())
+
+# Compute average BMI of those women with at most 5 pregnancies
+Pima_diabetes %>%
+	dplyr::select(Pregnancies, BMI) %>% 
+	dplyr::filter(Pregnancies <= 5) %>%
+	dplyr::summarize(avg_BMI_few_Preg = mean(BMI), n = n())
+```
+
+## Exercise 3: Transform NoShow dataset
+
+a) Start with some exploration of the dataset
+
+```{r}
+library(readr)
+dat <- readr::read_csv(file = "C:/Users/stefan.konigorski/Desktop/data_Teaching/NoShow/KaggleV2-May-2016.csv")
+
+# How many levels of gender are there?
+
+# How many hypertension cases are there?
+
+# do all age values make sense?
+```
+
+Run the following commands and inspect the results. 
+
+```{r}
+# Import data
+dat <- read.csv(file = "C:/Users/stefan.konigorski/Desktop/data_Teaching/NoShow/KaggleV2-May-2016.csv")
+
+# transform variables
+dat$Age[dat$Age < 0] <- NA
+# check again:
+table(dat$Age < 0)
+
+# another way how to check how many observations there are in the dataset
+length(dat$PatientId)
+# do all patients only come once?
+length(unique(dat$PatientId))
+
+# transform dataset (extract subset)
+dat_complete1 <- na.omit(dat)
+dat_complete2 <- dat[complete.cases(dat), ]
+dat_complete3 <- dat[!is.na(dat$Age), ]
+
+# more examples for transformation:
+d <- data.frame(x = c(1:4), y = c(NA, NA, 2, 4))
+d
+na.omit(d)
+d[complete.cases(d),]
+```
+
+## Exercise 4: times and dates
+
+a) Practise to work with dates and times in R.
+
+```{r}
+# Download NoShow csv file KaggleV2-May-2016.csv from Blackboard and import in R using both the read.csv and readr::read_csv function.
+library(readr)
+dat1 <- readr::read_csv(file = "C:/Users/stefan.konigorski/Desktop/data_Teaching/NoShow/KaggleV2-May-2016.csv")
+dat2 <- read.csv(file = "C:/Users/stefan.konigorski/Desktop/data_Teaching/NoShow/KaggleV2-May-2016.csv")
+
+# look at data frames
+head(dat1)
+head(dat2)
+
+str(dat1)
+str(dat2)
+# -> readr::read_csv has already read in the date/time variables ScheduledDay, AppointmentDay correctly as date/time variable
+# -> read.csv has read in the date/time variables ScheduledDay, AppointmentDay as factors
+
+# Use as.Date() function to create variables of class Date:
+SDay_1 <- as.Date(dat1$ScheduledDay)
+ADay_1 <- as.Date(dat1$AppointmentDay)
+SDay_2 <- as.Date(dat2$ScheduledDay)
+ADay_2 <- as.Date(dat2$AppointmentDay)
+
+# check classes
+class(dat1$ScheduledDay)
+class(dat2$ScheduledDay)
+class(SDay_1)
+class(SDay_2)
+
+# compare:
+head(dat1$ScheduledDay)
+head(SDay_1)
+head(SDay_2)
+
+head(dat1$AppointmentDay)
+head(ADay_1)
+head(ADay_2)
+
+# now look at their values as numbers:
+head(as.numeric(dat1$ScheduledDay)) # -> seconds since 1970-1-1
+head(as.numeric(SDay_1)) # -> days since 1970-1-1
+head(as.numeric(dat2$ScheduledDay)) # not a number that makes sense for calculations (rank in ordering of dates)
+
+# Now you can e.g. make calculations with these variables, e.g. create new variable that is the difference between two dates
+dat1$hour_diff <- dat1$ScheduledDay - dat1$AppointmentDay
+str(dat1$hour_diff)
+
+# Now answer the question if the AppointmentDay is always before the ScheduledDay?
+```
+
+b) Check the variables ScheduledDay and AppointmentDay. Is the AppointmentDay always before the ScheduledDay? If something seems weird, do further checks.
+
+Variable description from https://www.kaggle.com/joniarroba/noshowappointments: 
+
+* DataMarcacaoConsulta (from the order in the dataset: ScheduledDay) = The day of the actual appointment, when they have to visit the doctor.
+* DataAgendamento (from the order in the dataset: AppointmentDay) = The day someone called or registered the appointment, this is before appointment of course.
+
+```{r}
+```
+
+

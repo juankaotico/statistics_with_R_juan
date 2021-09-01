@@ -1,0 +1,94 @@
+---
+title: "Class 2 - solutions to exercises"
+author: "Stefan Konigorski"
+date: "October 28, 2019"
+output:
+  html_document: default
+---
+
+## Exercise 2: Check data set
+
+b) Answer the following questions (these are already computing some descriptive statistics)
+
+```{r}
+# Load/import data
+load("C:/Users/stefan.konigorski/Desktop/data_Teaching/PimaIndians/Pima_diabetes.RData")
+# Pima_diabetes <- read.csv(file = url("https://www.dropbox.com/s/4s4rhf6abda6gw2/Pima_diabetes.csv?dl=1"))
+
+# How many women in the sample have diabetes? (outcome==1)
+table(Pima_diabetes$Outcome)
+
+# How many women are older than 50 years?
+table(Pima_diabetes$Age>50)
+
+# Do all insulin values make sense?
+summary(Pima_diabetes$Insulin)
+```
+
+## Exercise 3: times and dates
+
+a) Start with some exploration of the dataset
+
+```{r}
+library(readr)
+dat <- readr::read_csv(file = "C:/Users/stefan.konigorski/Desktop/data_Teaching/NoShow/KaggleV2-May-2016.csv")
+
+# How many levels of gender are there?
+table(dat$Gender)
+
+# How many hypertension cases are there? (21801)
+table(dat$Hipertension)
+
+# do all age values make sense?
+table(dat$Age)
+hist(dat$Age)
+table(dat$Age)
+table(dat$Age == 0)
+table(dat$Age < 0)
+summary(dat$Age)
+# -> 1x value -1 which cannot be correct. 3539x value 0, which might be correct.
+```
+
+## Exercise 4: times and dates
+
+b) Check the variables ScheduledDay and AppointmentDay. Is the AppointmentDay always before the ScheduledDay? If something seems weird, do further checks.
+
+Variable description from https://www.kaggle.com/joniarroba/noshowappointments: 
+
+* DataMarcacaoConsulta (from the order in the dataset: ScheduledDay) = The day of the actual appointment, when they have to visit the doctor.
+* DataAgendamento (from the order in the dataset: AppointmentDay) = The day someone called or registered the appointment, this is before appointment of course.
+
+```{r}
+# Question: is the AppointmentDay always before the ScheduledDay
+table(dat$ScheduledDay > dat$AppointmentDay)
+table(dat$ScheduledDay < dat$AppointmentDay)
+table(dat$ScheduledDay == dat$AppointmentDay)
+
+dat$hour_diff <- dat$ScheduledDay - dat$AppointmentDay
+table(dat$hour_diff > 0)
+
+# and look at it:
+hist(as.numeric(dat$hour_diff), main = "Histogram of difference between \n scheduling and appointment day in hours", xlab = "Difference in hours")
+hist(as.numeric(dat$hour_diff)/24, main = "Histogram of difference between \n scheduling and appointment day in days", xlab = "Difference in days")
+
+# some further checks: what is going on?
+head(dat$ScheduledDay)
+head(dat$AppointmentDay)
+# -> ah, maybe the two are wrongly labeled (translated?!), that ScheduledDay is when the appointment was made, and AppointmentDay is when the patient saw the doctor
+table(dat$AppointmentDay > dat$ScheduledDay)
+
+# next thought: AppointmentDay was always set to 0:00 o'clock. Set it to the next day i.e. add 1 day, then check again:
+dat$AppointmentDay_cor <- dat$AppointmentDay + 86400
+table(dat$AppointmentDay_cor > dat$ScheduledDay)
+
+# -> so this seems to be the right thing: (i) variables were mixed up, (ii) 1 day should be added, (iii) then three values corrected:
+dat[!(dat$AppointmentDay_cor > dat$ScheduledDay), ]
+# what to do with these?
+# depending on the analysis, set maybe to NA since don't know what is wrong
+dat$AppointmentDay_cor[!(dat$AppointmentDay_cor > dat$ScheduledDay)] <- NA
+dat$ScheduledDay[!(dat$AppointmentDay_cor > dat$ScheduledDay)] <- NA
+
+#check again
+table(dat$AppointmentDay_cor > dat$ScheduledDay)
+# dat[!(dat$AppointmentDay_cor > dat$ScheduledDay), ]
+```

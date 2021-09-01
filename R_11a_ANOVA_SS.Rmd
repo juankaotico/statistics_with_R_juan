@@ -1,0 +1,145 @@
+---
+title: "Example: Decomposition of sum of squares in ANOVA"
+author: "Stefan Konigorski"
+date: "January 13, 2020"
+output:
+  html_document: default
+---
+
+## Example 1: large mean differences (relative to total variation)
+
+```{r}
+# Generate data
+X <- factor(c(rep(1, 25), rep(2, 25), rep(3, 25), rep(4, 25)))
+Level1 <- rnorm(n = 25, mean = 10, sd = 1)
+Level2 <- rnorm(n = 25, mean = 20, sd = 1)
+Level3 <- rnorm(n = 25, mean = 30, sd = 1)
+Level4 <- rnorm(n = 25, mean = 40, sd = 1)
+Y <- c(Level1, Level2, Level3, Level4)
+dat <- data.frame(Y, X)
+
+# Look at data and mean of Y across levels of X
+tapply(Y, X, mean)
+plot(X, Y)
+plot(as.numeric(X), Y)
+
+# Compute ANOVA
+fit1 <- aov(Y ~ X)
+summary(fit1)
+Yhat <- predict(fit1)
+
+# What are the predicted Y values? -> mean of Y across levels of X
+Yhat
+table(Yhat)
+
+# What is the mean of Y?
+mean(Y)
+
+# Compute SS by hand and look at it (with this, the F statistic can then be computed by hand)
+QS_total <- sum( (Y - mean(Y))^2 )
+QS_regr  <- sum( (Yhat - mean(Y))^2 )
+QS_resid <- sum( (Y - Yhat)^2 )
+
+summary(fit1)
+QS_total
+QS_regr
+QS_resid
+```
+
+## Example 2: moderate mean differences (relative to total variation)
+
+```{r}
+# Generate data
+X <- factor(c(rep(1, 25), rep(2, 25), rep(3, 25), rep(4, 25)))
+Level1 <- rnorm(n = 25, mean = 10, sd = 5)
+Level2 <- rnorm(n = 25, mean = 20, sd = 5)
+Level3 <- rnorm(n = 25, mean = 30, sd = 5)
+Level4 <- rnorm(n = 25, mean = 40, sd = 5)
+Y <- c(Level1, Level2, Level3, Level4)
+
+# Look at data and mean of Y across levels of X
+tapply(Y, X, mean)
+plot(X, Y)
+# Generate figure for slides:
+plot(as.numeric(X), Y, xlab = "X", xaxt = 'n')
+axis(side = 1, at = 1:4)
+points(x = c(1, 2, 2.5, 3, 4), 
+       y = c(tapply(Y, X, mean)[1:2], mean(Y), tapply(Y, X, mean)[3:4]), 
+       col = c("red", "red", "blue", "red", "red"), pch = 19, cex = c(1, 1, 2, 1, 1))
+
+# Compute ANOVA
+fit2 <- aov(Y ~ X)
+Yhat <- predict(fit2)
+
+# Compute SS by hand 
+QS_total <- sum( (Y - mean(Y))^2 )
+QS_regr  <- sum( (Yhat - mean(Y))^2 )
+QS_resid <- sum( (Y - Yhat)^2 )
+
+summary(fit2)
+QS_total
+QS_regr
+QS_resid
+```
+
+## Example 3: small mean differences (relative to total variation)
+
+```{r}
+# Generate data
+X <- factor(c(rep(1, 25), rep(2, 25), rep(3, 25), rep(4, 25)))
+Level1 <- rnorm(n = 25, mean = 10, sd = 100)
+Level2 <- rnorm(n = 25, mean = 20, sd = 100)
+Level3 <- rnorm(n = 25, mean = 30, sd = 100)
+Level4 <- rnorm(n = 25, mean = 40, sd = 100)
+Y <- c(Level1, Level2, Level3, Level4)
+
+# Look at data and mean of Y across levels of X
+tapply(Y, X, mean)
+plot(X, Y)
+plot(as.numeric(X), Y)
+
+# Compute ANOVA
+fit3 <- aov(Y ~ X)
+Yhat <- predict(fit3)
+
+# Compute SS by hand 
+QS_total <- sum( (Y - mean(Y))^2 )
+QS_regr  <- sum( (Yhat - mean(Y))^2 )
+QS_resid <- sum( (Y - Yhat)^2 )
+
+summary(fit3)
+QS_total
+QS_regr
+QS_resid
+```
+
+## Example 4: small mean differences (but still large enough relative to total variation due to large sample size)
+
+```{r}
+# Generate data
+X <- factor(c(rep(1, 250), rep(2, 250), rep(3, 250), rep(4, 250)))
+Level1 <- rnorm(n = 250, mean = 10, sd = 100)
+Level2 <- rnorm(n = 250, mean = 20, sd = 100)
+Level3 <- rnorm(n = 250, mean = 30, sd = 100)
+Level4 <- rnorm(n = 250, mean = 40, sd = 100)
+Y <- c(Level1, Level2, Level3, Level4)
+
+# Look at data and mean of Y across levels of X
+tapply(Y, X, mean)
+plot(X, Y)
+plot(as.numeric(X), Y)
+
+# Compute ANOVA
+fit4 <- aov(Y ~ X)
+Yhat <- predict(fit4)
+
+# Compute SS by hand 
+QS_total <- sum( (Y - mean(Y))^2 )
+QS_regr  <- sum( (Yhat - mean(Y))^2 )
+QS_resid <- sum( (Y - Yhat)^2 )
+
+summary(fit4)
+QS_total
+QS_regr
+QS_resid
+```

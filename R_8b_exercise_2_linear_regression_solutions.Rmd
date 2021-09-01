@@ -1,0 +1,60 @@
+---
+title: "Solutions to exercise 2: Simple linear regression"
+author: "Stefan Konigorski"
+date: "December 9, 2019"
+output:
+  html_document: default
+---
+
+## Load KiGGS data
+
+```{r}
+#dat_link <- url("https://www.dropbox.com/s/nbh0f6upejh7nr8/data.RData?dl=1")
+#load(dat_link)
+load("C:/Users/stefan.konigorski/Desktop/data_Teaching/KiGGS/KiGGS03_06.RData")
+dat <- KiGGS03_06
+```
+
+## Linear regression
+
+a) Compute a linear regression by predicting systolic blood pressure (variable sys12) by BMI (variable bmiB) of children.
+b) Compute a linear regression by predicting systolic blood pressure (variable sys12) by BMI categories (variable bmiKH) of children.
+
+```{r}
+# create variables
+sbp <- dat$sys12
+bmi <- dat$bmiB
+bmi_cat <- dat$bmiKH
+bmi_cat <- factor(bmi_cat, labels = c("strongly underweight", "underweight", "normal weight", "overweight", "obese"))  
+
+# Check format
+str(sbp)
+str(bmi)
+str(bmi_cat)
+
+# transform sbp to numeric variable!
+sbp <- as.numeric(as.character(sbp))
+
+# compute linear regression models
+res1 <- lm(sbp ~ bmi)
+res2 <- lm(sbp ~ bmi_cat)
+
+# Look at the results
+summary(res1)
+summary(res1)$coefficients[2, 4]
+summary(res2)
+
+# Visualize results
+plot(bmi, sbp)
+abline(a = summary(res1)$coefficients[1, 1], b = summary(res1)$coefficients[2, 1])
+
+plot(bmi_cat, sbp)
+
+# get predictions of SBP
+sbp_pred1 <- predict(res1)
+sbp_pred2 <- predict(res2)
+head(sbp)
+head(sbp_pred1)
+head(sbp_pred2)
+```
+

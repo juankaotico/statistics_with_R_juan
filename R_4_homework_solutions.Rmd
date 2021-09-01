@@ -1,0 +1,138 @@
+---
+title: "Homework 4 - Solutions"
+author: "Stefan Konigorski"
+date: "November 11, 2019"
+output:
+  html_document: default
+---
+
+Download this R Markdown file, save it on your computer, and perform all the below tasks by inserting your answer in text or by inserting R chunks below. After you are done, upload this file with your solutions on Moodle.
+
+## Exercise 1: Descriptive statistics - example 1
+
+Create a summary table with descriptive statistics of the esoph dataframe in the datasets package. For example by using the summary_table function in the qwraps2 package. Alternatively, only compute the descriptive statistics of interest.
+
+```{r, results = "asis"}
+#install.packages("qwraps2")
+library(qwraps2)
+options(qwraps2_markup = "markdown")
+
+#install.packages("datasets")
+library(datasets)
+?esoph
+str(esoph)
+head(esoph)
+
+# create quick table of the variables stratified by tobacco use (could use some polishing of rows, eg only show mean(SD) for ncases and ncontrols, and has imperfect inclusion of tobaccogroup in the rows):
+library(dplyr)
+esoph$agegp <- as.factor(esoph$agegp)
+esoph$alcgp <- as.factor(esoph$alcgp)
+esoph$tobgp <- as.factor(esoph$tobgp)
+
+esoph %>%
+  dplyr::select(.data$tobgp, .data$agegp, .data$alcgp, .data$ncases, .data$ncontrols) %>%
+  dplyr::group_by(tobgp) %>%
+  summary_table(.) %>%
+  print(rtitle = "Summary Statistics",
+        cnames = c("Tobacco group 1 (0-9g/day) \\ (N = 24)", "Tobacco group 2 (10-19g/day) \\ (N = 24)", 
+                   "Tobacco group 3 (20-29g/day) \\ (N = 20)", "Tobacco group 4 (30+g/day) \\ (N = 20)"))
+
+# Longer version to compute the table:
+our_summary <-
+  list("Age group" =
+       list("25-34" = ~ qwraps2::n_perc0(.data$agegp == "25-34", show_symbol = TRUE, na_rm = TRUE),
+            "35-44" = ~ qwraps2::n_perc0(.data$agegp == "35-44", show_symbol = TRUE, na_rm = TRUE),
+            "45-54" = ~ qwraps2::n_perc0(.data$agegp == "45-54", show_symbol = TRUE, na_rm = TRUE),
+            "55-64" = ~ qwraps2::n_perc0(.data$agegp == "55-64", show_symbol = TRUE, na_rm = TRUE),
+            "65-74" = ~ qwraps2::n_perc0(.data$agegp == "65-74", show_symbol = TRUE, na_rm = TRUE),
+            "75+" = ~ qwraps2::n_perc0(.data$agegp == "75+", show_symbol = TRUE, na_rm = TRUE)),
+      "Alcohol group" =
+       list("0-39g/day" = ~ qwraps2::n_perc0(.data$alcgp == "0-39g/day", show_symbol = TRUE, na_rm = TRUE),
+            "40-79g/day" = ~ qwraps2::n_perc0(.data$alcgp == "40-79g/day", show_symbol = TRUE, na_rm = TRUE),
+            "80-119g/day" = ~ qwraps2::n_perc0(.data$alcgp == "80-119g/day", show_symbol = TRUE, na_rm = TRUE),
+            "120+g/day" = ~ qwraps2::n_perc0(.data$alcgp == "120+g/day", show_symbol = TRUE, na_rm = TRUE)),
+       "Number of cases" =
+       list("Frequency" = ~ sum(.data$ncases)),
+       "Number of controls" =
+       list("Frequency" = ~ sum(.data$ncontrols))
+       )
+our_table <- summary_table(dplyr::group_by(esoph, tobgp), our_summary)
+
+print(our_table,
+      rtitle = "Summary Statistics",
+        cnames = c("Tobacco group 1 (0-9g/day) \\ (N = 24)", "Tobacco group 2 (10-19g/day) \\ (N = 24)", 
+                   "Tobacco group 3 (20-29g/day) \\ (N = 20)", "Tobacco group 4 (30+g/day) \\ (N = 20)"))
+
+```
+
+## Exercise 2: Descriptive statistics - example 2
+
+Create a summary table with descriptive statistics of the UKLungDeaths data in the datasets package. For example by using the summary_table function in the qwraps2 package. Alternatively, only compute the descriptive statistics of interest.
+
+Hint: the data consists of three datasets.
+
+```{r, results = "asis"}
+# install.packages("qwraps2")
+library(qwraps2)
+options(qwraps2_markup = "markdown")
+
+# install.packages("datasets")
+library(datasets)
+?UKLungDeaths 
+# -> these are three datasets, each including a time series with monthly deaths from bronchitis, emphysema and asthma, from January 1974 to December 1979, for both sexes together (ldeaths), and stratified by sex into mdeaths (for males) and fdeaths (for females)
+
+# look at the datasets first:
+ldeaths
+mdeaths
+fdeaths
+
+# their structure is a time series, which is a special vector format:
+str(ldeaths)
+str(mdeaths)
+str(fdeaths)
+class(ldeaths)
+
+# My choice: Create a table of the average number of deaths, for the variables year and month, stratified by gender.
+
+# For this, create a dataframe first:
+dat <- data.frame(deaths = c(mdeaths, fdeaths), gender = factor(c(rep("male", length(mdeaths)), rep("female", length(fdeaths)))), 
+                  year = factor(rep(c(rep("1974", 12), rep("1975", 12), rep("1976", 12), rep("1977", 12), rep("1978", 12), rep("1979", 12)), 2)), 
+                  month = factor(rep(c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"), 12)))
+
+# Create tables using tapply:
+tapply(dat$deaths, list(dat$year, dat$gender), mean, na.rm = TRUE)
+tapply(dat$deaths, list(dat$month, dat$gender), mean, na.rm = TRUE)
+
+# using summary_table function:
+our_summary2 <-
+  list("Year" =
+       list("1974" = ~ qwraps2::mean_sd(.data$deaths[.data$year == "1974"], denote_sd = "paren", na_rm = TRUE, show_n = "never"),
+            "1975" = ~ qwraps2::mean_sd(.data$deaths[.data$year == "1975"], denote_sd = "paren", na_rm = TRUE, show_n = "never"),
+            "1976" = ~ qwraps2::mean_sd(.data$deaths[.data$year == "1976"], denote_sd = "paren", na_rm = TRUE, show_n = "never"),
+            "1977" = ~ qwraps2::mean_sd(.data$deaths[.data$year == "1977"], denote_sd = "paren", na_rm = TRUE, show_n = "never"),
+            "1978" = ~ qwraps2::mean_sd(.data$deaths[.data$year == "1978"], denote_sd = "paren", na_rm = TRUE, show_n = "never"),
+            "1979" = ~ qwraps2::mean_sd(.data$deaths[.data$year == "1979"], denote_sd = "paren", na_rm = TRUE, show_n = "never")),
+       "Month" =
+       list("Jan" = ~ qwraps2::mean_sd(.data$deaths[.data$month == "Jan"], denote_sd = "paren", na_rm = TRUE, show_n = "never"),
+            "Feb" = ~ qwraps2::mean_sd(.data$deaths[.data$month == "Feb"], denote_sd = "paren", na_rm = TRUE, show_n = "never"),
+            "Mar" = ~ qwraps2::mean_sd(.data$deaths[.data$month == "Mar"], denote_sd = "paren", na_rm = TRUE, show_n = "never"),
+            "Apr" = ~ qwraps2::mean_sd(.data$deaths[.data$month == "Apr"], denote_sd = "paren", na_rm = TRUE, show_n = "never"),
+            "May" = ~ qwraps2::mean_sd(.data$deaths[.data$month == "May"], denote_sd = "paren", na_rm = TRUE, show_n = "never"),
+            "Jun" = ~ qwraps2::mean_sd(.data$deaths[.data$month == "Jun"], denote_sd = "paren", na_rm = TRUE, show_n = "never"),
+            "Jul" = ~ qwraps2::mean_sd(.data$deaths[.data$month == "Jul"], denote_sd = "paren", na_rm = TRUE, show_n = "never"),
+            "Aug" = ~ qwraps2::mean_sd(.data$deaths[.data$month == "Aug"], denote_sd = "paren", na_rm = TRUE, show_n = "never"),
+            "Sep" = ~ qwraps2::mean_sd(.data$deaths[.data$month == "Sep"], denote_sd = "paren", na_rm = TRUE, show_n = "never"),
+            "Oct" = ~ qwraps2::mean_sd(.data$deaths[.data$month == "Oct"], denote_sd = "paren", na_rm = TRUE, show_n = "never"),
+            "Nov" = ~ qwraps2::mean_sd(.data$deaths[.data$month == "Nov"], denote_sd = "paren", na_rm = TRUE, show_n = "never"),
+            "Dec" = ~ qwraps2::mean_sd(.data$deaths[.data$month == "Dec"], denote_sd = "paren", na_rm = TRUE, show_n = "never"))
+       
+  )
+summary_table(dat, our_summary2)
+
+our_table2 <- summary_table(dplyr::group_by(dat, gender), our_summary2)
+print(our_table2,
+      rtitle = "Mean number (SD) of deaths",
+        cnames = c("In women (N = 72)", "In men \\ (N = 72)")
+      )
+```
+

@@ -1,0 +1,99 @@
+---
+title: "Homework 8"
+author: "Juan Carlos Niño"
+date: "December 14, 2019"
+output:
+  html_document: default
+---
+
+Download this R Markdown file, save it on your computer, and perform all the below tasks by inserting your answer in text or by inserting R chunks below. After you are done, upload this file with your solutions on Moodle.
+
+## Exercise 1: Correlation
+
+In the KiGGS dataset, compute the Pearson and Spearman correlation coefficient for the two variables 'sys1' and 'sys2', as well as confidence intervals and hypothesis tests whether the two variables are associated or not. Interpret the results, and decide which of the two coefficients you would report in your analysis and why.
+
+#Load the file
+dat_link <- url("https://www.dropbox.com/s/nbh0f6upejh7nr8/data.RData?dl=1")
+load(dat_link)
+dat <- KiGGS03_06
+
+#separate the data
+sbp1 <- as.numeric(as.character(dat$sys1))
+sbp2 <- as.numeric(as.character(dat$sys2))
+
+#correlation 
+cor(data.frame(sbp1, sbp2), use = "complete.obs", method = "pearson")
+cor(data.frame(sbp1, sbp2), use = "complete.obs", method = "spearman")
+cor.test(sbp1, sbp2, use = "complete.obs",method = "pearson")
+cor.test(sbp1, sbp2, use = "complete.obs",method = "spearman")
+#Plot
+plot(data.frame(sbp1, sbp2))
+
+##
+The correlation with the pearson mthods is slightlier bigger than the spearman with a third decimal of significance. Taking into account that the p-value is the same for both. The most natural wat, would be to use pearson.
+##
+
+## Exercise 2: Linear regression
+
+a) Predict sys2 by sys1 using a simple linear regression, and interpret the results.
+
+# create variables
+sbp1 <- dat$sys1
+sbp2 <- dat$sys2
+# Check format
+str(sbp1)
+str(sbp2)
+# transform sbp to numeric variable!
+sbp1 <- as.numeric(as.character(sbp1))
+sbp2 <- as.numeric(as.character(sbp2))
+# Check format again
+str(sbp1)
+str(sbp2)
+# compute linear regression model
+res1 <- lm(sbp2 ~ sbp1)
+# Look at the results
+summary(res1)
+
+##
+Here we are evaluating if sbp2 is dependent or not of sbp1. 
+We have an overal p-value highly significant
+and analyzing the coefficient we have a PR(<|t|) smaller than 0.05 as well, so we can reject the null hypothesis that the predictor is zero and accept the relationship.
+
+We could define spb2 = 16.8287 + 0.8269*spb1
+##
+
+b) Add age2 and sex as predictors to the linear regression model above, and interpret the results. 
+
+# create variables
+age <- dat$age2
+sex <- dat$sex
+# Check format
+str(age)
+str(sex)
+table(age)
+table(sex)
+#Format
+sex <- factor (sex, labels = c("Male", "Female"))
+table(sex)
+# compute multiplelinear regression model
+res2 <- lm(sbp2 ~ sbp1+as.numeric(age)+sex)
+# Look at the results
+summary(res2)
+
+##
+Here we are evaluating if sbp2 is dependent or not of sbp1, age and sex.
+We have an overal p-value highly significant
+For the sbp1 and age variable we have a PR(<|t|) smaller than 0.05 as well, so we can reject the null hypothesis that the predictor is zero and accept the relationship.
+for the sex variable the PR is a lot bigger than for the other two variables, but still smaller than 0.05, thus we can accept the relationship as well.
+##
+
+## Exercise 3: Visualization of regression (optional)
+
+Use the functions in ggplot2 to compute a scatter plot and insert the regression line of the analysis in exercise 2a.
+
+##I'm not sure
+
+plot(sbp1, sbp2)
+abline(a = summary(res1)$coefficients[1, 1], b = summary(res1)$coefficients[2, 1])
+ 
+ #I don't understand why the numbers

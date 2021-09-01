@@ -1,0 +1,23 @@
+---
+title: "Exercise 3-4: examples of size calculation"
+author: "Stefan Konigorski"
+date: "November 25, 2019"
+output:
+  html_document: default
+---
+
+## Preparation
+
+Load package:
+
+```{r}
+# install.packages("pwr")
+library(pwr)  # includes functions to compute the power and sample size
+```
+
+## Sample size calculation
+
+```{r}
+?pwr.t.test
+pwr.t.test(d = 0.5, sig.level = 0.05, power = 0.9, type = "paired")
+```

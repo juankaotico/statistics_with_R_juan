@@ -1,0 +1,38 @@
+---
+title: "Example 3 - the bootstrap method"
+author: "Stefan Konigorski"
+date: "November 18, 2019"
+output:
+  html_document: default
+---
+
+Goal: Illustrate the bootstrap method for estimating the standard error of the estimate of the mean (for estimating the expected value of a random variable).
+
+```{r}
+# Preparation: generate data 
+set.seed(1)
+n <- 100
+sigma <- 1
+X <- rnorm(n = n, mean = 0, sd = sigma)
+
+# Preparation: Generate empty vector of the means of the separate bootstrap samples
+mean_BS <- NULL
+
+# Bootstrap step 1: draw a sample of size 100 from X with replacement, compute the mean, do this 1000 times, and save the means in mean_BS:
+k = 1000
+for(i in 1:k){
+  #print(i)
+  X_sample_i <- sample(X, size = n, replace = TRUE)
+  mean_BS[i] <- mean(X_sample_i)
+}
+# Bootstrap step 2: Compute the standard deviation of the means - this is the bootstrap estimate of the standard error
+SE_BS_mean <- sqrt(((k-1)/k)*var(mean_BS))
+SE_BS_mean
+```
+
+```{r}
+# Compare this with the theoretical estimator of the standard error, which is sigma/sqrt(n) = 1/sqrt(100) = 1/10 = 0.1:
+sigma/sqrt(n)
+```
+
+Question: Is the bootstrap estimator getting better when you increase n or k?

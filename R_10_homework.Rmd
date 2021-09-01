@@ -1,0 +1,23 @@
+---
+title: "Homework 10"
+author: "Stefan Konigorski"
+date: "January 6, 2020"
+output:
+  html_document: default
+---
+
+Download this R Markdown file, save it on your computer, and perform all the below tasks by inserting your answer in text or by inserting R chunks below. After you are done, upload this file with your solutions on Moodle.
+
+For all exercises, use the KiGGS dataset.
+
+## Exercise 1: Logistic regression
+
+Choose 1 suitable outcome variable of interest and 3 predictors, and compute a logistic regression model. Interpret the results: which predictor is associated with the outcome and what is the strength of association (odds ratio)? Also, is the model a good fit i.e. can the outcome be predicted well (look at the misclassification table for this)?
+
+## Exercise 2: Poisson regression
+
+Predict the amount of measles vaccinations (Maanzahl) by the number of siblings (e006B1), the sex and age of the children (sex, age2), place of residence (STALA, OW) and the monthly household income (e093), using a Poisson regression model. Interpret the results. Which variables are associated with the outcome? Is the model a good fit to the data?
+
+## Exercise 3: Negative Binomial regression (optional)
+
+Predict the amount of measles vaccinations (Maanzahl) by the number of siblings (e006B1), the sex and age of the children (sex, age2), place of residence (STALA, OW) and the monthly household income (e093), using a Negative Binomial regression model. Interpret the results. Which variables are associated with the outcome? Is the model a good fit to the data?

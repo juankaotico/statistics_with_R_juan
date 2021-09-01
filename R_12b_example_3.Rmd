@@ -1,0 +1,295 @@
+---
+title: "Mixed models 2 - Example 3"
+author: "Stefan Konigorski"
+date: "January 20, 2020"
+output:
+  html_document: default
+---
+
+## Aim
+
+Describe the development of the cognitive performance over time in the HRS dataset.
+
+## Preparation
+
+Read and format the HRS dataset
+
+```{r}
+library(readr)  # not necessary for loading of the dataset, only necessary to show labels and formatting of the dataset correctly
+dat_link <- url("https://www.dropbox.com/s/yox8fvt91ff73ye/hrs.RData?dl=1")
+load(dat_link)
+#load("C:/Users/stefan.konigorski/Desktop/data_Teaching/HRS/CogImp/hrs.RData")
+
+# Preparations
+# rename variable at first timepoint
+names(hrs)[5] <- "R1IMRC"
+# define variable at second timepoint - Integrate the variables R2AIMRC10 and R2HIMRC20, which both capture different subgroups of the sample at the second timepoint.
+table(is.na(hrs$R2AIMRC10)) # -> only ~7000 of ~36000 observations
+table(is.na(hrs$R2HIMRC20)) # -> only ~10000 of ~36000 observations
+table(!is.na(hrs$R2HIMRC20) & !is.na(hrs$R2AIMRC10)) # -> no person has a value at both variables, i.e. the variables complement each other
+hrs$R2IMRC <- rowSums( cbind (hrs$R2AIMRC10, hrs$R2HIMRC20), na.rm=TRUE)
+hrs$R2IMRC[!(!is.na(hrs$R2HIMRC20) | !is.na(hrs$R2AIMRC10))] <- NA
+table(is.na(hrs$R2IMRC))
+# Rescale R1IMRC and R2IMRC onto the same scale as all other variables (measures 3-12 were on a scale of 1-10, measures 1-2 on the scale 1-20)
+hrs$R1IMRC <- hrs$R1IMRC/2
+hrs$R2IMRC <- hrs$R2IMRC/2
+
+# Extract variables for first investigation
+data_IMRC <- data.frame(HHID = hrs$HHID, PN = hrs$PN, HHID_PN = paste(hrs$HHID, hrs$PN, sep = "_"),
+                        T1 = hrs$R1IMRC, T2 = hrs$R2IMRC, T3 = hrs$R3IMRC, T4 = hrs$R4IMRC, T5 = hrs$R5IMRC, T6 = hrs$R6IMRC,
+                        T7 = hrs$R7IMRC, T8 = hrs$R8IMRC, T9 = hrs$R9IMRC, T10 = hrs$R10IMRC, T11 = hrs$R11IMRC, T12 = hrs$R12IMRC)
+
+# Preparation: transform dataset from wide to long format
+library(tidyr)
+data_IMRC_long <- gather(data = data_IMRC, key = "time", value = "IMRC", T1:T12, factor_key=TRUE)
+
+# Order dataset by HHID and time and not the other way around
+data_IMRC_long <- data_IMRC_long[order(data_IMRC_long$HHID_PN, data_IMRC_long$time),]
+rownames(data_IMRC_long) <- 1:nrow(data_IMRC_long)
+
+# Transform time into numeric variable
+data_IMRC_long$time <- as.numeric(data_IMRC_long$time)
+data_IMRC_long[1:20,]
+```
+
+## Analysis
+
+Use time as continuous variable to predict the cognitive performance:
+
+```{r}
+###################################################################################################
+######################### Linear regression  #####################################################
+###################################################################################################
+
+fit1 <- lm(IMRC ~ time, data = data_IMRC_long)
+summary(fit1)
+# -> estimated effect of time: beta=0.106
+# doesn't consider that the IMRC values were measured within persons, and assumes that all observations are independent
+
+# Extract the predicted values (of the cognitive performance by the regression model)
+pred.fit1 <- predict(fit1)
+
+# Predicted values:
+head(pred.fit1)
+# -> the same value is predicted at T1 for all persons, at T2 the value from T1 + 0.106 is predicted for all persons, ...
+
+# Model fit
+AIC(fit1)
+
+# Look at results
+# Regression line
+library(ggplot2)
+ggplot(data_IMRC_long[!is.na(data_IMRC_long$IMRC) & !is.na(data_IMRC_long$time), ], aes(x = time, y = IMRC)) + 
+  stat_summary(aes(y = pred.fit1), fun.y = mean, colour = "red", geom = "line")
+# Scatterplot with all observations and regression line
+ggplot(data_IMRC_long[!is.na(data_IMRC_long$IMRC) & !is.na(data_IMRC_long$time), ], aes(x = time, y = IMRC)) + 
+  geom_point() +
+  stat_summary(aes(y = pred.fit1), fun.y = mean, colour = "red", geom = "line")
+# -> Regression predicts a linear increase of the cognitive performance over time
+
+### Alternatively, this can also be done as follows:
+plot(data_IMRC_long$time, data_IMRC_long$IMRC)
+abline(fit1)
+# or: with(data_IMRC_long, plot(time, IMRC)); abline(fit1)
+
+# Compare the regression line with the trajectories of selected persons:
+# first 100 observations:
+ggplot(data_IMRC_long[1:100,], aes(x=time, y=IMRC)) +  
+  geom_line(aes(group=HHID_PN, colour = HHID_PN)) +  
+  scale_x_continuous("Time", breaks = 1:12, minor_breaks = NULL, labels = 1:12)
+# observations 101-200:
+ggplot(data_IMRC_long[101:200,], aes(x=time, y=IMRC)) +  
+  geom_line(aes(group=HHID_PN, colour = HHID_PN)) +  
+  scale_x_continuous("Time", breaks = 1:12, minor_breaks = NULL, labels = 1:12)
+# -> The trajectories differ very strongly between observations; a clear increasing linear trend is not visible.
+```
+
+```{r}
+######################################################################################################################################
+######################### Linear mixed model without modeling the within-individual correlation (i.e. diagonal matrix) ###############
+######################################################################################################################################
+
+library(nlme)
+fit2 <- lme(IMRC ~ time, random = ~1|HHID_PN, na.action = na.exclude, data = data_IMRC_long)
+summary(fit2)
+# -> estimated effect of time (fixed effect): beta=0.053 (much smaller compared to linear regression!)
+# considers that the IMRC values are measured within persons.
+
+# Extract the predicted values
+pred.fit2 <- predict(fit2)
+
+# Look at the predicted values:
+pred.fit2[1:20]
+# -> The model does not predict the same value for all measures of all persons at T1, but the overall mean and coefficient of beta0 plus some value from the random effect (this is different for each person!)
+
+# Visualization of the predicted values
+ggplot(data_IMRC_long, aes(x = time, y = IMRC)) + 
+  stat_summary(aes(y = pred.fit2), fun.y = mean, colour = "red", geom = "line")
+# -> clearly different curve as in linear regression
+
+# With lines for the predicted trajectories for each person
+ggplot(data_IMRC_long, aes(x=time, y=IMRC)) + 
+  geom_line(aes(y=pred.fit2, group = HHID_PN)) + 
+  stat_summary(aes(y = pred.fit2), fun.y = mean, colour = "red", geom = "line")
+
+# With lines for the predicted trajectories for a couple of persons, plus the overall estimate
+ggplot() + 
+  geom_line(data = data_IMRC_long[1:100,], aes(x=time, y=pred.fit2[1:100], group = HHID_PN)) + 
+  stat_summary(data = data_IMRC_long, aes(x=time, y = pred.fit2), fun.y = mean, colour = "red", geom = "line")
+
+# With lines for the predicted trajectories for a couple of persons and their actual values, plus the overall estimate
+ggplot() + 
+  geom_point(data = data_IMRC_long[1:100,], aes(x=time, y=IMRC, group = HHID_PN, colour = HHID_PN)) + 
+  geom_line(data = data_IMRC_long[1:100,], aes(x=time, y=pred.fit2[1:100], group = HHID_PN, colour = HHID_PN)) + 
+  stat_summary(data = data_IMRC_long, aes(x=time, y = pred.fit2), fun.y = mean, colour = "red", geom = "line")
+ggplot() + 
+  geom_point(data = data_IMRC_long[101:200,], aes(x=time, y=IMRC, group = HHID_PN, colour = HHID_PN)) + 
+  geom_line(data = data_IMRC_long[101:200,], aes(x=time, y=pred.fit2[101:200], group = HHID_PN, colour = HHID_PN)) + 
+  stat_summary(data = data_IMRC_long, aes(x=time, y = pred.fit2), fun.y = mean, colour = "red", geom = "line")
+```
+
+```{r}
+##############################################################################################
+######################### Mixed model with CS (=compound symmetry) correlation ###############
+##############################################################################################
+
+fit2b <- lme(IMRC ~ time, random = ~1|HHID_PN, correlation = corCompSymm( form = ~ 1 | HHID_PN), na.action = na.exclude, data = data_IMRC_long)
+summary(fit2b)
+# -> Praktically identical since the estimated correlations between all measures of a person are practically 0, i.e. the residual covariance matrix is a diagonal matrix and therefore this model is essentially identical to the above model.
+```
+
+```{r}
+##############################################################################################
+######################### Mixed model with AR1 correlation ###################################
+##############################################################################################
+
+fit3 <- lme(IMRC ~ time, random = ~1|HHID_PN, correlation = corAR1( form = ~ 1 | HHID_PN), na.action = na.exclude, data = data_IMRC_long)
+summary(fit3)
+# -> estimated effect of time (fixed effect): beta=0.077 (again different)
+
+# Extract the predicted values
+pred.fit3 <- predict(fit3)
+
+# Visualization of the predicted values
+ggplot(data_IMRC_long, aes(x = time, y = IMRC)) + 
+  stat_summary(aes(y = pred.fit3), fun.y = mean, colour = "red", geom = "line")
+# -> clearly different curve as in linear regression, similar as with CS structure
+
+# Predicted trajectories for a couple of persons and their actual values, plus the overall estimate
+ggplot() + 
+  geom_point(data = data_IMRC_long[1:100,], aes(x=time, y=IMRC, group = HHID_PN, colour = HHID_PN)) + 
+  geom_line(data = data_IMRC_long[1:100,], aes(x=time, y=pred.fit3[1:100], group = HHID_PN, colour = HHID_PN)) + 
+  stat_summary(data = data_IMRC_long, aes(x=time, y = pred.fit3), fun.y = mean, colour = "red", geom = "line")
+ggplot() + 
+  geom_point(data = data_IMRC_long[101:200,], aes(x=time, y=IMRC, group = HHID_PN, colour = HHID_PN)) + 
+  geom_line(data = data_IMRC_long[101:200,], aes(x=time, y=pred.fit3[101:200], group = HHID_PN, colour = HHID_PN)) + 
+  stat_summary(data = data_IMRC_long, aes(x=time, y = pred.fit3), fun.y = mean, colour = "red", geom = "line")
+```
+
+```{r}
+##########################################################################################
+######################### Mixed model with unstructured correlation ######################
+##########################################################################################
+
+# Takes very long to compute, and doesn's converge with standard settings.
+fit4 <- lme(IMRC ~ time, random = ~1|HHID_PN, correlation = corSymm( form = ~ 1 | HHID_PN), na.action = na.exclude, data = data_IMRC_long)
+```
+
+Use time as categorical variable to predict cognitive performance:
+
+```{r}
+##################################################################################################
+######################### Linear regression  #####################################################
+##################################################################################################
+
+fit5 <- lm(IMRC ~ as.factor(time), data = data_IMRC_long)
+summary(fit5)
+
+# Extract the predicted values
+pred.fit5 <- predict(fit5)
+
+# Model fit
+AIC(fit5)
+
+# Visualization of the predicted values
+ggplot(data_IMRC_long[!is.na(data_IMRC_long$IMRC) & !is.na(data_IMRC_long$time), ], aes(x = time, y = IMRC)) + 
+  stat_summary(aes(y = pred.fit5), fun.y = mean, colour = "red", geom = "line")
+
+# Alternative visualization of the predicted values (needs preparation steps so that the cat_plot function can be used)
+library(interactions)
+data_IMRC_long_for_plot <- data_IMRC_long[complete.cases(data_IMRC_long), ]
+data_IMRC_long_for_plot <- droplevels(data_IMRC_long_for_plot)
+data_IMRC_long_for_plot$time <- factor(data_IMRC_long_for_plot$time)
+fit5.neu <- aov(IMRC ~ time, data = data_IMRC_long_for_plot)
+cat_plot(fit5.neu, pred = time, geom = "line")
+```
+
+```{r}
+###################################################################################################
+######################### Mixed model with AR1 correlation ########################################
+###################################################################################################
+
+fit6 <- lme(IMRC ~ factor(time), random = ~1|HHID_PN, correlation = corAR1( form = ~ 1 | HHID_PN), na.action = na.exclude, data = data_IMRC_long)
+summary(fit6)
+
+# Extract the predicted values
+pred.fit6 <- predict(fit6)
+
+# Visualization of the predicted values
+ggplot(data_IMRC_long, aes(x = time, y = IMRC)) + 
+  stat_summary(aes(y = pred.fit6), fun.y = mean, colour = "red", geom = "line")
+
+# Predicted trajectories for a couple of persons and their actual values, plus the overall estimate
+ggplot() + 
+  geom_point(data = data_IMRC_long[1:100,], aes(x=time, y=IMRC, group = HHID_PN, colour = HHID_PN)) + 
+  geom_line(data = data_IMRC_long[1:100,], aes(x=time, y=pred.fit6[1:100], group = HHID_PN, colour = HHID_PN)) + 
+  stat_summary(data = data_IMRC_long, aes(x=time, y = pred.fit6), fun.y = mean, colour = "red", geom = "line")
+ggplot() + 
+  geom_point(data = data_IMRC_long[101:200,], aes(x=time, y=IMRC, group = HHID_PN, colour = HHID_PN)) + 
+  geom_line(data = data_IMRC_long[101:200,], aes(x=time, y=pred.fit6[101:200], group = HHID_PN, colour = HHID_PN)) + 
+  stat_summary(data = data_IMRC_long, aes(x=time, y = pred.fit6), fun.y = mean, colour = "red", geom = "line")
+```
+
+With quadratic and cubic time effects (i.e. parametric function to model nonlinear time effects with fewer than 11 dummy variables):
+
+```{r}
+##################################################################################################
+######################### Linear regression  #####################################################
+##################################################################################################
+
+fit7 <- lm(IMRC ~ time + I(time^2) + I(time^3), data = data_IMRC_long)
+summary(fit7)
+
+# Extract the predicted values
+pred.fit7 <- predict(fit7)
+
+# Model fit
+AIC(fit7)
+
+# Visualization of the predicted values
+ggplot(data_IMRC_long[!is.na(data_IMRC_long$IMRC) & !is.na(data_IMRC_long$time), ], aes(x = time, y = IMRC)) + 
+  stat_summary(aes(y = pred.fit7), fun.y = mean, colour = "red", geom = "line")
+# -> similar curve as with categorical time, but the drop at the beginning disappears.
+```
+
+```{r}
+###################################################################################################
+######################### Mixed model with AR1 correlation ########################################
+###################################################################################################
+
+fit8 <- lme(IMRC ~ time + I(time^2) + I(time^3), random = ~1|HHID_PN, correlation = corAR1( form = ~ 1 | HHID_PN), na.action = na.exclude, data = data_IMRC_long)
+summary(fit8)
+
+# Extract the predicted values
+pred.fit8 <- predict(fit8)
+
+# Visualization of the predicted values
+ggplot(data_IMRC_long, aes(x = time, y = IMRC)) + 
+  stat_summary(aes(y = pred.fit8), fun.y = mean, colour = "red", geom = "line")
+```
+
+Summary: depending on how time is modeled and in which model, the conclusions are very different with respect to how the trajectories of cognitive performance are.
+
+In next steps, further predictors could be added as fixed effects to the model (e.g. sex) and their effects on IMRC an be tested. Also, the predicted curves could be computed stratified by sex, and it can be tested if parts of the time trends can be explained by these additional predictors.
+
+Also, it could be considered that the individuals are clustered within household (clustering of values in individuals in households), which was not considered in above analyses.

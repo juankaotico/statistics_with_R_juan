@@ -1,0 +1,176 @@
+---
+title: "Causal discovery with 2 variables"
+author: "Stefan Konigorski"
+date: "February 3, 2020"
+output:
+  html_document: default
+---
+
+## Preparation
+
+Install and load R packages
+
+```{r}
+#install.packages("dHSIC") # Independence Testing via Hilbert Schmidt Independence Criterion, https://cran.r-project.org/web/packages/dHSIC/index.html
+#install.packages("mgcv") # Generalized additive (mixed) models (GAMs) and extensions, https://cran.r-project.org/web/packages/mgcv/index.html 
+library(dHSIC)
+library(mgcv)
+```
+
+## Causal discovery
+
+When X is linearly related to Y with normally distributed residuals:
+
+```{r}
+X_on_Y <- Y_on_X <- conclude_X_on_Y <- NULL
+
+for(i in 1:100){
+  print(i)
+  X <- rnorm(n = 100, 0, 1)
+  Y <- X + rnorm(n = 100, 0, 1)
+  
+  modelXY <- gam(Y ~ s(X))
+  modelYX <- gam(X ~ s(Y))
+  
+  p_XY <- dhsic.test(modelXY$residuals, X)$p.value
+  p_YX <- dhsic.test(modelYX$residuals, Y)$p.value
+
+  X_on_Y[i] <- (p_XY > 0.05)  
+  Y_on_X[i] <- (p_YX > 0.05)
+  
+  conclude_X_on_Y[i] <- (p_XY > p_YX)  
+}
+
+table(X_on_Y, Y_on_X)
+table(conclude_X_on_Y)
+```
+
+When X is non-linearly related to Y with normally distributed residuals:
+
+```{r}
+X_on_Y <- Y_on_X <- conclude_X_on_Y <- NULL
+
+for(i in 1:100){
+  print(i)
+  X <- rnorm(n=100, 0, 1)
+  Y <- X^3 + rnorm(n=100, 0, 1)
+  
+  modelXY <- gam(Y ~ s(X))
+  modelYX <- gam(X ~ s(Y))
+  
+  p_XY <- dhsic.test(modelXY$residuals, X)$p.value
+  p_YX <- dhsic.test(modelYX$residuals, Y)$p.value
+
+  X_on_Y[i] <- (p_XY > 0.05)  
+  Y_on_X[i] <- (p_YX > 0.05)
+  
+  conclude_X_on_Y[i] <- (p_XY > p_YX)  
+}
+
+table(X_on_Y, Y_on_X)
+table(conclude_X_on_Y)
+```
+
+```{r}
+# Visualize what happens:
+set.seed(5)
+X <- rnorm(n=100, 0, 1)
+Y <- X^3 + rnorm(n=100, 0, 1)
+modelXY <- gam(Y ~ s(X))
+modelYX <- gam(X ~ s(Y))
+  
+par(mfrow=c(2,2)) 
+plot(X, Y)
+plot(modelXY$residuals, X)
+plot(Y, X)
+plot(modelYX$residuals, Y)
+```
+
+```{r}
+# Isn't a simple correlation test sufficient? (no!)
+
+cor.test(modelXY$residuals, X)
+cor.test(modelYX$residuals, Y)
+
+dhsic.test(modelXY$residuals, X)$p.value
+dhsic.test(modelYX$residuals, Y)$p.value
+```
+
+```{r}
+# Does it also work with a linear regression model (with quadratic and cubic terms)? (yes)
+
+X_on_Y <- Y_on_X <- conclude_X_on_Y <- NULL
+
+for(i in 1:100){
+  print(i)
+  X <- rnorm(n=100, 0, 1)
+  Y <- X^3 + rnorm(n=100, 0, 1)
+  
+  modelXY_lm <- lm(Y ~ X + I(X^2) + I(X^3))
+  modelYX_lm <- lm(X ~ Y + I(Y^2) + I(Y^3))
+  
+  p_XY <- dhsic.test(modelXY_lm$residuals, X)$p.value
+  p_YX <- dhsic.test(modelYX_lm$residuals, Y)$p.value
+
+  X_on_Y[i] <- (p_XY > 0.05)  
+  Y_on_X[i] <- (p_YX > 0.05)
+  
+  conclude_X_on_Y[i] <- (p_XY > p_YX)  
+}
+
+table(X_on_Y, Y_on_X)
+table(conclude_X_on_Y)
+```
+
+When X is linearly related to Y with non-normally distributed residuals:
+
+```{r}
+X_on_Y <- Y_on_X <- conclude_X_on_Y <- NULL
+
+for(i in 1:100){
+  print(i)
+  X <- rnorm(n=100, 0, 1)
+  Y <- X + rlnorm(n=100, meanlog = 0, sdlog = 1)
+  
+  modelXY <- gam(Y ~ s(X))
+  modelYX <- gam(X ~ s(Y))
+  
+  p_XY <- dhsic.test(modelXY$residuals, X)$p.value
+  p_YX <- dhsic.test(modelYX$residuals, Y)$p.value
+
+  X_on_Y[i] <- (p_XY > 0.05)  
+  Y_on_X[i] <- (p_YX > 0.05)
+  
+  conclude_X_on_Y[i] <- (p_XY > p_YX)  
+}
+
+table(X_on_Y, Y_on_X)
+table(conclude_X_on_Y)
+```
+
+And what about when X is linearly related to Y with normally distributed residuals but X is not normally distributed?
+
+```{r}
+X_on_Y <- Y_on_X <- conclude_X_on_Y <- NULL
+
+for(i in 1:100){
+  print(i)
+  X <- rlnorm(n=100, meanlog = 0, sdlog = 1) 
+  Y <- X + rnorm(n=100, 0, 1)
+  
+  modelXY <- gam(Y ~ s(X))
+  modelYX <- gam(X ~ s(Y))
+  
+  p_XY <- dhsic.test(modelXY$residuals, X)$p.value
+  p_YX <- dhsic.test(modelYX$residuals, Y)$p.value
+
+  X_on_Y[i] <- (p_XY > 0.05)  
+  Y_on_X[i] <- (p_YX > 0.05)
+  
+  conclude_X_on_Y[i] <- (p_XY > p_YX)  
+}
+
+table(X_on_Y, Y_on_X)
+table(conclude_X_on_Y)
+```
+

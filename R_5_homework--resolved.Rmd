@@ -1,0 +1,145 @@
+---
+title: "Homework 5"
+author: "Juan Carlos Niño"
+date: "November 18, 2019"
+output:
+  html_document: default
+---
+
+Download this R Markdown file, save it on your computer, and perform all the below tasks by inserting your answer in text or by inserting R chunks below. After you are done, upload this file with your solutions on Moodle.
+
+## Exercise 1: Probability distributions
+
+Explore the functions *rnorm*, *rt*, *runif*, *rbinom* in R that allow you to generate random numbers from the normal, t-, uniform, and binomial distribution. Compute them with different values, and inspect histograms to visualize their distribution.
+
+## Solution
+
+A-
+The Normal distribution the following functions:
+
+rnorm(n, mean = 0, sd = 1) 
+Where n is the number of observations, with a mean equal to mean and standard deviation equal to sd.
+
+Example:
+
+datanorm <- rnorm(1000, mean =10, sd = 1.5)
+
+hist(datanorm)
+
+datanorm1 <- rnorm(500, mean =3, sd = 1)
+
+hist(datanorm1)
+
+datanorm2 <- rnorm(100000, mean =324, sd = 5)
+
+hist(datanorm2, breaks =40)
+
+
+B-
+for the students t- test it is:
+
+rt(n, df, ncp)
+where n is the number of observations, df are the dregrees of freedom (>0), and ncp means non-centrality parameter delta.
+
+Example:
+
+datattest <- rt(1000, df =10, ncp = 1.5)
+
+hist(datattest)
+
+datattest1 <- rt(500, df =3, ncp = 1)
+
+hist(datattest1)
+
+datattest2 <- rt(100000, df =324, ncp = 5)
+
+hist(datattest2, breaks =40)
+
+
+
+c-
+for the uniform distribution --> providing information on the interval from "min" to "max"
+
+runif(n, min = 0, max = 1)
+where n is the number of observations and "min", "max" are the lower and upper limits of the distribution, and must be finite
+
+Example:
+
+dataunif <- runif(1000, min =1.5, max = 10)
+
+hist(dataunif)
+
+dataunif1 <- runif(500, min =0, max = 1)
+
+hist(dataunif1)
+
+dataunif2 <- runif(100000, min =5, max = 3245)
+
+hist(dataunif2, breaks =40)
+
+
+D-
+for the binomial distribution --> number of "successes" in size trials
+
+rbinom(n, size, prob)
+where n is the number of observations, size are the number of trials and prob the probability of success on each trial.
+
+Example:
+
+databinom <- rbinom(1000, size =10, prob = 0.5)
+
+hist(databinom)
+
+databinom1 <- rbinom(500, size =3, prob = 1)
+
+hist(databinom1)
+
+databinom2 <- rbinom(100000, size =324, prob = 0.666)
+
+hist(databinom2, breaks =40)
+
+
+## Exercise 2: Odds ratio
+
+In the KiGGS dataset:
+
+#import data
+datakiggs <- KiGGS03_06
+
+
+a) Compute the proportion of mothers that had hypertension during pregnancy. Use the variable 'e0155' which has values "Ja" (yes), "Nein" (No) and "Weiß nicht" (don't know).
+
+datakiggs$e0155
+datakiggs$oddsratio.hype <- 0
+datakiggs$oddsratio.hype[datakiggs$e0155 == "Ja"] <- 1
+datakiggs$oddsratio.hype
+proportion.of.ja <- sum((datakiggs$oddsratio.hype==1)/length(datakiggs$oddsratio.hype))
+
+
+b) Create a new variable that is 0 or 1 depending on whether the children are small or tall (think of a good way how to do this) based on the variable 'groeB'. 
+
+datakiggs$groeB
+
+datakiggs$age2
+
+datakiggs$tall <- 0
+datakiggs$tall[datakiggs$groeB[] ]
+
+#my idea was to divide the datasetd of the stature depending in the 5 different age groups, and those values that are bigger than 2 sd will be assigned to tall. but i did not know how to make it work.
+
+sd(datakiggs$groeB[datakiggs$agegrp == "0 - 2 Jahre" ])
+
+tapply(datakiggs$groeB, list(datakiggs$agegrp), mean, sd, na.rm = T)
+
+
+
+
+c) Then compute the odds ratio that the mother had hypertension during pregnancy (e0155 == "Ja", versus e0155 == "Nein") of tall vs. small children.
+
+## Exercise 3 (optional): Confidence intervals
+
+Look again at the hypertension variable from exercise 2. Use the binom::binom.confint and the questionr::odds.ratio functions to compute the estimates of the proportion and odds ratio as well as their confidence intervals. (you need to download and load these packages at first).
+
+## Exercise 4 (optional, advanced): Bootstrap
+
+Adapt the bootstrap implementation in R_5b_estimation_bootstrap.Rmd to compute the bootstrap estimate of the standard error of the variance of a normally-distributed and a t-distributed variable. Are they similar?

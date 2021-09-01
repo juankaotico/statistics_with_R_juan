@@ -1,0 +1,30 @@
+---
+title: "Mixed models 2 - Example 1"
+author: "Stefan Konigorski"
+date: "January 20, 2020"
+output:
+  html_document: default
+---
+
+## Overview
+
+Use the BodyWeight dataset in R. It describes the weight and diet of rats over time
+
+Aim: describe the weight trajectories over time, and predict this by the diet.
+
+```{r}
+library(nlme)
+data(BodyWeight)
+dat <- BodyWeight
+
+# Inspect dataset
+head(dat)
+summary(dat)
+
+...
+
+# Predict weight:
+...
+
+```
+

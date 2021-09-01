@@ -1,0 +1,25 @@
+---
+title: "Exercise 2"
+author: "Stefan Konigorski"
+date: "November 25, 2019"
+output:
+  html_document: default
+---
+
+## Load KiGGS data
+
+```{r}
+dat_link <- url("https://www.dropbox.com/s/nbh0f6upejh7nr8/data.RData?dl=1")
+load(dat_link)
+
+# Alternative: download data from Moodle, either (i) the raw .sav dataset (SPSS data file) which you need to import, or (ii) the already imported .RData file with:
+# load("/Users/skonigor/Desktop/data_Biostat2/KiGGS/KiGGS03_06.RData")
+# (you need to adapt path)
+
+dat <- KiGGS03_06
+```
+
+## Do hypothesis tests
+
+a) Select one metric and one binary variable (or create one) and perform a 2-sample t-test.
+b) Select two categorical variables (or create them) and perform a $\chi^2$ test.	

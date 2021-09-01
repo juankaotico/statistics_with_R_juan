@@ -1,0 +1,61 @@
+---
+title: "Missing values - Introductory example"
+author: "Stefan Konigorski"
+date: "December 2, 2019"
+output:
+  html_document: default
+---
+
+## Load KiGGS data
+
+```{r}
+dat_link <- url("https://www.dropbox.com/s/nbh0f6upejh7nr8/data.RData?dl=1")
+load(dat_link)
+
+# Alternative: download data from Moodle, either (i) the raw .sav dataset (SPSS data file) which you need to import, or (ii) the already imported .RData file with:
+# load("C:/Users/stefan.konigorski/Desktop/data_Teaching/KiGGS/KiGGS03_06.RData")
+# (you need to adapt path)
+
+dat <- KiGGS03_06
+```
+
+## Example of possible situation with missing values
+
+Study question: 
+
+Is there an association between the length of nightly sleep of children and their psychological wellbeing?
+
+Variables available to investigate this study question:
+
+```{r}
+# sleep:
+str(dat$e065z)
+head(dat$e065z)
+summary(dat$e065z)
+
+# Psychological wellbeing of the children (self rating)
+str(dat$pw100.k)
+head(dat$pw100.k)
+summary(dat$pw100.k)
+```
+
+Number of missing values:
+
+```{r}
+table(!is.na(as.numeric(as.character(dat$pw100.k))))
+table(!is.na(as.numeric(as.character(dat$e065z))))
+
+table(!is.na(as.numeric(as.character(dat$pw100.k))) & !is.na(as.numeric(as.character(dat$e065z))))
+```
+
+Question: What is the best way to investigate the study question?
+-> e.g. use the rating of the children's wellbeing by their parents
+
+```{r}
+# Psychological wellbeing of the children (external rating by parents)
+summary(dat$pw100.e)
+table(!is.na(as.numeric(as.character(dat$pw100.e))))
+
+table(!is.na(as.numeric(as.character(dat$pw100.e))) & !is.na(as.numeric(as.character(dat$e065z))))
+```
+

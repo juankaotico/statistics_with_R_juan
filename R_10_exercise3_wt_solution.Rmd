@@ -1,0 +1,59 @@
+---
+title: "Exercise 3: Regression of categorical and ordinal data"
+author: "Stefan Konigorski"
+date: "January 6, 2020"
+output:
+  html_document: default
+---
+
+## Load KiGGS data
+
+```{r}
+#dat_link <- url("https://www.dropbox.com/s/nbh0f6upejh7nr8/data.RData?dl=1")
+#load(dat_link)
+load("C:/Users/stefan.konigorski/Desktop/data_Teaching/KiGGS/KiGGS03_06.RData")
+dat <- KiGGS03_06
+```
+
+## Logistic, multinomial, ordinal regression
+
+Predict the birth weight of children (e017a.k, in categories) by the BMI of their parents (Mbmi.k, Vbmi.k), their sex (sex), and the birth week (e016z).
+For this, use a multinomial regression and ordinal regression model, and compare the results to pairwise logistic regression models. 
+Are the results similar? 
+What are the advantages/disadvantages of each approach?
+
+```{r}
+# Preparation - check variables (eg if they are factor variables, and if yes, how many categories they have), especially important for e017a.k
+str(dat$e017a.k)
+str(dat$Mbmi.k)
+str(dat$Vbmi.k)
+str(dat$sex)
+str(dat$e016z)
+
+# Format variables
+dat$e017a.k <- factor(dat$e017a.k, labels = c("<2500", "2500-2999", "3000-3499", "3500-3999", "4000-4499", ">4500"))
+dat$Mbmi.k  <- factor(dat$Mbmi.k, labels = c("underweight", "normal weight", "overweight", "obese"))
+dat$Vbmi.k  <- factor(dat$Vbmi.k, labels = c("underweight", "normal weight", "overweight", "obese"))
+dat$sex     <- factor(dat$sex, labels = c("boys", "girls"))
+dat$e016z   <- as.numeric(as.character(dat$e016z))
+
+# Look at variables
+table(dat$e017a.k)
+table(dat$Mbmi.k)
+table(dat$Vbmi.k)
+table(dat$sex)
+table(dat$e016z)
+```
+
+```{r}
+# Multinomial regression:
+library(nnet)
+
+# Ordinal regression:
+library(MASS)
+
+# Pairwise logistic regression:
+...
+```
+
+

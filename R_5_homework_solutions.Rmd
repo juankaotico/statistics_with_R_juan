@@ -1,0 +1,218 @@
+---
+title: "Homework 5 - Solutions"
+author: "Stefan Konigorski"
+date: "November 18, 2019"
+output:
+  html_document: default
+---
+
+Download this R Markdown file, save it on your computer, and perform all the below tasks by inserting your answer in text or by inserting R chunks below. After you are done, upload this file with your solutions on Moodle.
+
+## Exercise 1: Probability distributions
+
+**Task:** Explore the functions *rnorm*, *rt*, *runif*, *rbinom* in R that allow you to generate random numbers from the normal, t-, uniform, and binomial distribution. Compute them with different values, and inspect histograms to visualize their distribution.
+
+**Solution:** 
+
+```{r}
+### Binomial distributions
+# Generate data (1000 observations) from the normal distribution with three different expected values and variances:
+X1a <- rbinom(n = 1000, size = 1, prob = 0.1)
+X1b <- rbinom(n = 1000, size = 10, prob = 0.5) #throwing the coin 10 times per experiment
+X1c <- rbinom(n = 1000, size = 10, prob = 0.1)
+# visualize it, plot histograms with the relative frequency on the Y axis
+hist(X1a, freq = FALSE)
+par(mfrow = c(1, 2))
+hist(X1b, freq = FALSE, ylim = c(0, 1))
+hist(X1c, freq = FALSE, ylim = c(0, 1))
+
+### Uniform-distributions
+# Generate data (1000 observations) from the normal distribution with three different expected values and variances:
+# allvalues have a equal probability
+X2a <- runif(n = 1000, min = -1, max = 1)
+X2b <- runif(n = 1000, min = 0, max = 2)
+X2c <- runif(n = 1000, min = -5, max = 5)
+# visualize it, plot histograms with the relative frequency on the Y axis
+par(mfrow = c(1, 3))
+hist(X2a, freq = FALSE, xlim = c(-5, 5), ylim = c(0, 1))
+hist(X2b, freq = FALSE, xlim = c(-5, 5), ylim = c(0, 1))
+hist(X2c, freq = FALSE, xlim = c(-5, 5), ylim = c(0, 1))
+
+### Normal distributions
+# Generate data (1000 observations) from the normal distribution with three different expected values and variances:
+X3a <- rnorm(n = 1000, mean = 0, sd = 1)
+X3b <- rnorm(n = 1000, mean = 0, sd = 4)
+X3c <- rnorm(n = 1000, mean = 4, sd = 0.5)
+# visualize it, plot histograms with the relative frequency on the Y axis
+par(mfrow = c(1, 3))
+hist(X3a, freq = FALSE, xlim = c(-15, 15), ylim = c(0, 1))
+hist(X3b, freq = FALSE, xlim = c(-15, 15), ylim = c(0, 1))
+hist(X3c, freq = FALSE, xlim = c(-15, 15), ylim = c(0, 1))
+
+### t-distributions
+# Generate data (1000 observations) from the normal distribution with three different expected values and variances:
+#if the degress of freedoms are high, the fuyncion looks like a normal distribution
+#decreasing the degress of freedom will spread the data in the graphic
+X4a <- rt(n = 1000, df = 1000)
+X4b <- rt(n = 1000, df = 100)
+X4c <- rt(n = 1000, df = 10)
+X4d <- rt(n = 1000, df = 2)
+# visualize it, plot histograms with the relative frequency on the Y axis
+par(mfrow = c(1, 2))
+hist(X3a, freq = FALSE, xlim = c(-5, 5), ylim = c(0, 0.5))
+hist(X4a, freq = FALSE, xlim = c(-5, 5), ylim = c(0, 0.5))
+par(mfrow = c(2, 2))
+hist(X4a, freq = FALSE, xlim = c(-10, 10), ylim = c(0, 0.5))
+hist(X4b, freq = FALSE, xlim = c(-10, 10), ylim = c(0, 0.5))
+hist(X4c, freq = FALSE, xlim = c(-10, 10), ylim = c(0, 0.5), breaks = 20)
+hist(X4d, freq = FALSE, xlim = c(-10, 10), ylim = c(0, 0.5), breaks = 100)
+# -> the smaller df, the more extreme values there are
+
+### Additional comments:
+### (1) ###
+# the histogram shows the empirical distribution of the variable
+# this can also be obtained as a function:
+par(mfrow = c(1, 1))
+hist(X3a, freq = FALSE, col = "grey")
+lines(density(X3a), col = "blue")
+# This function is an estimate of the true unknown probability density function!
+
+### (2) ###
+# Remember: The integral under the curve (= area in the bars in the histogram) is the probability!
+# To get the area under the curve (probability!) in the tails, the functions qnorm etc. can be used which computes the quantile:
+qnorm(p = 0.95, mean = 0, sd = 1)# probabily of a value is smaller than X
+# -> In a random variable that has a standard normal distribution, 95% of the values are smaller than 1.64.
+```
+
+## Exercise 2: Odds ratio
+
+**Task:** In the KiGGS dataset:
+
+a) Compute the proportion of mothers that had hypertension during pregnancy. Use the variable 'e0155' which has values "Ja" (yes), "Nein" (No) and "Weiß nicht" (don't know).
+b) Create a new variable that is 0 or 1 depending on whether the children are small or tall (think of a good way how to do this) based on the variable 'groeB'. 
+c) Then compute the odds ratio that the mother had hypertension during pregnancy (e0155 == "Ja", versus e0155 == "Nein") of tall vs. small children.
+
+**Solution:** 
+
+```{r}
+# load data
+dat_link <- url("https://www.dropbox.com/s/nbh0f6upejh7nr8/data.RData?dl=1")
+load(dat_link)
+dat <- KiGGS03_06
+
+# a)
+str(dat$e0155)
+table(dat$e0155)
+# -> there are many missing values, and the third category "Weiß nicht", hence there are different possible estimates of the proportion of mothers that had hypertension during pregnancy!
+# There is not a single correct answer, they just mean different things. One possible estimate is:
+202/2306
+# = 0.088. This would yield the estimate that 8.8% of mothers had hypertension during pregnancy.
+
+# b)
+# Also here, there are different ways how to compute this tallness variable. Either just by looking at the height, then choosing a cutoff, and assigning 0/1 whether the child was taller or not. However, it might be more meaningful to create the tallness variable by incorporating age information, ie create an age-adjusted (age-specific) indicator whether a child is tall (compared to its peers i.e. children of the same age group). Do this here.
+# First, lets look at the variables:
+str(dat$groeB)  # height
+str(dat$age2)   # age (in groups of 2 years)
+# transform height variable to numeric
+dat$groeB <- as.numeric(as.character(dat$groeB))
+# Let's look at mean age by age group:
+tapply(dat$groeB, dat$age2, mean, na.rm = TRUE)
+# Now let's compute the new 0-1 tallness variable by checking for each child, whether it is taller or shorter than the average height of all children in their age group:
+dat$tall <- NULL
+for(i in 1:length(levels(dat$age2))){
+  idx <- (dat$age2 == levels(dat$age2)[i])
+  dat$tall[idx] <- ifelse(dat$groeB[idx] > mean(dat$groeB[idx], na.rm = TRUE), 1, 0)
+}
+dat$tall <- factor(dat$tall, labels = c("short", "tall"))
+# reorder:
+dat$tall <- factor(dat$tall, levels = c("tall", "short"))
+table(dat$tall)
+
+# c)
+# Now compute the odds ratio that the mother had hypertension during pregnancy (e0155 == "Ja", versus e0155 == "Nein") of tall vs. small children:
+
+# first, format the hypertension variable and remove the observations "Weiß nicht"
+table(dat$e0155)
+dat$e0155[dat$e0155 == "Weiß nicht"] <- NA
+dat$e0155 <- droplevels(dat$e0155)
+# check:
+table(dat$e0155)
+
+# compute cross table:
+table(dat$e0155, dat$tall)
+
+# proportion of (the mothers) having hypertension for tall kids:
+p.tall <- 83/(83+857)
+# proportion of (the mothers) having hypertension for short kids:
+p.short <- 118/(118+1404)
+
+# odds of (the mothers) having hypertension for tall kids:
+odds.tall <- p.tall/(1-p.tall)
+# odds of (the mothers) having hypertension for short kids:
+odds.short <- p.short/(1-p.short)
+
+# Odds ratio: 
+odds.tall/odds.short
+
+# Computation in short:
+(83*1404)/(857*118)
+```
+
+## Exercise 3 (optional): Confidence intervals
+
+**Task:** Look again at the hypertension variable from exercise 2. Use the binom::binom.confint and the questionr::odds.ratio functions to compute the estimates of the proportion and odds ratio as well as their confidence intervals (you need to download and load these packages at first).
+
+**Solution:** 
+
+```{r}
+# install.packages("binom")
+# install.packages("questionr")
+library("binom")
+library("questionr")
+
+# Compute proportions and their 95 CI%:
+binom::binom.confint(83, 83+857)
+binom::binom.confint(118, 118+1404)
+
+# Compute OR and 95 CI%:
+# (this OR is almost identical to the OR we have computed above, the difference is that here, the conditional Maximum Likelihood Estimate rather than the unconditional MLE = sample OR is computed)
+questionr::odds.ratio(table(dat$e0155, dat$tall)) 
+```
+
+## Exercise 4 (optional, advanced): Bootstrap
+
+**Task:** Adapt the bootstrap implementation in R_5b_estimation_bootstrap.Rmd to compute the bootstrap estimate of the standard error of the variance of a normally-distributed and a t-distributed variable. Are they similar?
+
+**Solution:** 
+
+```{r}
+# Preparation: generate data
+set.seed(3)
+n <- 1000
+X1 <- rnorm(n = n, mean = 0, sd = 1)
+X2 <- rt(n = n, df = 2)
+
+# Estimate of the variance:
+var(X1)
+var(X2)
+
+# Bootstrap for X1
+var_SE_X1 <- NULL
+k = 100
+for(i in 1:k){
+  X1_sample_i <- sample(X1, size = n, replace = TRUE)
+  var_SE_X1[i] <- var(X1_sample_i)
+}
+# Bootstrap for X2
+var_SE_X2 <- NULL
+k = 100
+for(i in 1:k){
+  X2_sample_i <- sample(X2, size = n, replace = TRUE)
+  var_SE_X2[i] <- var(X2_sample_i)
+}
+
+### Bootstrap estimates of the standard error of the variance estimates:
+sd(var_SE_X1)
+sd(var_SE_X2)
+# -> similar the variance, which is much larger for the t-distribution with 2 degrees of freedom, the variance estimate varies a lot more (i.e. standard error estimate of the variance is larger)!
+```

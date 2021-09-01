@@ -1,0 +1,141 @@
+---
+title: "Exercise 1 with solutions: Logistic regression"
+author: "Stefan Konigorski"
+date: "January 6, 2020"
+output:
+  html_document: default
+---
+
+## Load KiGGS data
+
+```{r}
+dat_link <- url("https://www.dropbox.com/s/nbh0f6upejh7nr8/data.RData?dl=1")
+load(dat_link)
+#load("C:/Users/stefan.konigorski/Desktop/data_Teaching/KiGGS/KiGGS03_06.RData")
+dat <- KiGGS03_06
+```
+
+## Logistic regression
+
+a. Investigate if the amount and frequency of eating pancakes (fq41 and fq41a) are associated with shortsightedness (e0251), using logistic regression. (Question: What is predicted: incidence or prevalence of shortsightedness?). Interpret the results.
+
+b. Add further predictors and interpret the results. Also look at the predicted probabilities by the model and the classification table of true vs. predicted shortsightedness.
+
+```{r}
+# Preparation for logistic regression - check variables (eg if they are factor variables, and if yes, how many categories they have), especially important for e0251
+str(dat$e0251)
+str(dat$fq41)
+str(dat$fq41a)
+table(dat$e0251)
+table(dat$fq41)
+table(dat$fq41a)
+# -> dat$e0251 is factor with 3 categories
+
+# format variables
+dat$fq41a <- factor(dat$fq41a, labels = c("never", "1/4 piece or less", "1/2 piece", "1 piece", "2 pieces", "3 pieces or more"))
+dat$fq41a <- droplevels(dat$fq41a)
+dat$fq41 <- factor(dat$fq41, labels = c("never", "1x/month", "2-3x/month", "1-2x/week", "3-4x/week", "5-6x/week", "1x/day", "2-3x/day", "4-5x/day"))
+dat$e0251 <- factor(dat$e0251, labels = c("yes", "no", "don't know"))
+
+# Compute a logistic regression with these variables and interpret the results.
+model1 <- glm(e0251 ~ as.numeric(fq41) + as.numeric(fq41a), family = binomial(link = "logit"), data = dat)
+summary(model1)
+```
+
+```{r}
+# Logistic regression in R needs Y with values 0, 1 or a factor with two levels, and predicts the probability of "1", or the probability of the factor with higher level.
+# If there are 3 categories like here, R aggregates the highest two categories.
+# In general, for an outcome variable with k categories, R aggregates the highest k-1 categories and compares them with the lowest category.
+# i.e. in the above regression model, the probability of don't know + no (vs. yes) was predicted.
+
+# For a better interpretation of the results, transform the outcome variable. Remove the values "don't know" and the factor level to create a binary variable. Then reorder the levels.
+
+# Remove the values and factor level "don't know" to create a binary variable.
+dat$e0251[dat$e0251 == "don't know"] <- NA
+table(dat$e0251)
+dat$e0251 <- droplevels(dat$e0251)
+table(dat$e0251)
+# reorder the levels 
+dat$e0251 <- factor(dat$e0251, levels = c("no", "yes"))
+table(dat$e0251)
+
+# Recompute the logistic regression
+model1 <- glm(e0251 ~ as.numeric(fq41) + as.numeric(fq41a), family = binomial(link = "logit"), data = dat)
+summary(model1)
+```
+
+```{r}
+# Compute the odds ratio:
+exp(coef(model1))
+# Compute 95% confidence intervals of the odds ratio
+# install.packages("jtools")
+library(jtools)
+jtools::summ(model1, exp = T, confint = T, model.fit = F, digits = 3)
+```
+
+```{r}
+# Model fit:
+deviance(model1)
+AIC(model1)
+#install.packages("DescTools")
+library(DescTools)
+round(PseudoR2(model1, c("all")),3)
+```
+
+```{r}
+# Compute further models:
+
+model2 <- glm(e0251 ~ as.numeric(fq41) + as.numeric(fq41a) + as.numeric(age2), family = binomial(link = "logit"), data=dat)
+summary(model2)
+
+model3 <- glm(e0251 ~ as.numeric(fq41) + as.numeric(fq41a) + as.numeric(age2) + sex, family = binomial(link = "logit"), data=dat)
+summary(model3)
+
+model4 <- glm(e0251 ~ as.numeric(fq41) + as.numeric(fq41a) + as.numeric(age2) + sex + bmiB, family = binomial(link = "logit"), data=dat)
+summary(model4)
+
+# If you want to compare e.g. model 1 and 4 using a likelihood ratio test - for this, both regression have to be computed first with the same observations (complete cases), then you can do it with anova(model1, model4)
+```
+
+```{r}
+# Look at the predicted probabilites and classifications/misclassifications.
+
+# Overview (this is incorrect and doesn't work since there are observations with missing values, which are deleted from pred_p, i.e. these observations don't match those of dat$e0251):
+pred_p <- predict(model1, type = "response")
+cut_off <- 0.5
+pred_y <- as.numeric(pred_p > cut_off)
+table(pred_y, dat$e0251)
+
+# To get this to work, you need the following steps:
+```
+
+```{r}
+# for model 1:
+pred.1 <- predict(model1, type = "response")
+summary(pred.1)
+
+e0251.p.pred.1 <- rep(NA, length(dat$e0251))
+e0251.p.pred.1[as.numeric(names(pred.1))] <- pred.1
+e0251.pred.1 <- e0251.p.pred.1 > mean(e0251.p.pred.1, na.rm = TRUE)
+
+table(e0251.pred.1)
+table(dat$e0251)
+table( e0251.pred.1, dat$e0251)
+# -> Interpretation? better when you change cut-off?
+
+# for model 4:
+pred.4 <- predict(model4, type = "response")
+summary(pred.4)
+
+e0251.p.pred.4 <- rep(NA, length(dat$e0251))
+e0251.p.pred.4[as.numeric(names(pred.4))] <- pred.4
+e0251.pred.4 <- e0251.p.pred.4 > mean(e0251.p.pred.4, na.rm = TRUE)
+
+table(e0251.pred.4)
+table(dat$e0251)
+table(e0251.pred.4, dat$e0251)
+```
+
+Conclusions?
+Which variables are associated with shortsightedness?
+Is this a good model to predict shortsightedness?

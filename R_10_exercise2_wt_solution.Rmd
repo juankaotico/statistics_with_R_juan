@@ -1,0 +1,45 @@
+---
+title: "Exercise 2: Regression with count data"
+author: "Stefan Konigorski"
+date: "January 6, 2020"
+output:
+  html_document: default
+---
+
+## Load KiGGS data
+
+```{r}
+#dat_link <- url("https://www.dropbox.com/s/nbh0f6upejh7nr8/data.RData?dl=1")
+#load(dat_link)
+load("C:/Users/stefan.konigorski/Desktop/data_Teaching/KiGGS/KiGGS03_06.RData")
+dat <- KiGGS03_06
+```
+
+## Poisson regression
+
+Predict the amount of visits to the children's doctor (E085z01) by the number of siblings (e006B1), the sex and age of the children (sex, age2), place of residence (STALA, OW) and the monthly household income (e093), using a Poisson regression model. Interpret the results. Which variables are associated with the outcome? Is the model a good fit to the data?
+
+```{r}
+# Preparation - check variables (eg if they are factor variables, and if yes, how many categories they have), especially important for E085z01
+str(dat$E085z01)
+str(dat$e006B1)
+str(dat$sex)
+str(dat$age2)
+str(dat$STALA)
+str(dat$OW)
+str(dat$e093)
+
+# Format variables
+dat$e006B1<- factor(dat$e006B1, labels = c("no sibling", "1 sibling", "2 or more siblings"))
+dat$sex   <- factor(dat$sex, labels = c("boys", "girls"))
+dat$age2  <- factor(dat$age2, labels = c("0-1y", "2-3y", "4-5y", "6-7y", "8-9y", "10-11y", "12-13y", "14-15y", "16-17y"))
+dat$OW    <- factor(dat$OW, labels = c("east", "west"))
+dat$STALA <- factor(dat$STALA, labels = c("rural", "small_city", "medium_city", "urban"))
+...
+
+# Compute Poisson regression:
+...
+
+```
+
+

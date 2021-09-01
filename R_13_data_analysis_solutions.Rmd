@@ -1,0 +1,99 @@
+---
+title: "Data analysis - solution"
+author: "Stefan Konigorski"
+date: "January 27, 2020"
+output:
+  html_document: default
+---
+
+Note that the following is just one of many different ways how to analyze the question of interest.
+
+## Load KiGGS data
+
+```{r}
+dat_link <- url("https://www.dropbox.com/s/nbh0f6upejh7nr8/data.RData?dl=1")
+load(dat_link)
+#load("C:/Users/stefan.konigorski/Desktop/data_Teaching/KiGGS/KiGGS03_06.RData")
+dat <- KiGGS03_06
+```
+
+## Analysis
+
+Let's look at the variable e025a, which describes whether the child has reading help.
+
+```{r}
+# format
+dat$e025a <- factor(dat$e025a, labels = c("yes", "no"))
+
+# first look at the variable
+table(dat$e025a)
+
+# hm, very few observed values. not sure if the 14000 missing values are all no, or all missing. This might make a very big difference, but it might not be totally unreasonable to assume that most of the children with missing values don't have reading help - plus the fact that more than 80% of the children use reading help seems too high (at least to me).
+# as a solution, let's define a second variable and then analyze both.
+# also make sure that both have 'yes' as second category (for logistic regression)
+
+dat$read1 <- factor(dat$e025a, levels = c("no", "yes"))
+dat$read2 <- dat$read1 == "yes" & !is.na(dat$read1)
+dat$read2 <- factor(dat$read2, labels = c("no", "yes"))
+
+table(dat$read1)
+table(dat$read2)
+```
+
+Choose 3-5 variables that you think are relevant.
+
+```{r}
+# Let's choose sex, age2, e0641 (playing computer on week days), e0642 (playing computer on weekends)
+# check formatting of variables:
+str(dat$sex)
+str(dat$age2)
+str(dat$e0641)
+str(dat$e0642)
+
+# more details:
+table(dat$e0641)
+table(dat$e0642)
+
+# I am assuming that screentime has a linear effect on eye health, hence transform both variable to ordinal variables, and just add them up. That gives an ordinal variable of the "screentime burden".
+dat$screentime <- as.numeric(dat$e0641) + as.numeric(dat$e0642)
+table(dat$screentime)
+
+# now let's check how many observations there actually are of reading help with age and with computer time, since I can imagine that this is not all measured for infants:
+table(dat$read1, dat$age2)
+table(dat$read1, dat$screentime)
+table(dat$age2, dat$screentime)
+# -> seems all ok, only interesting that no child that is 0-1y, 14-15y or 16-17y has a value for screentime! Especially the empty categories for the older children seem suspicious, but nothing we can do about that here. This means that theses age categories will not be incorporated in the analysis with all variables.
+```
+
+
+Think of a suitable statistical model how to investigate this (you could also include the age when the child got their reading help into the analysis: e025z1)?
+
+Format the variables.
+
+Do the analysis.
+
+Check the assumptions of the analysis.
+
+Interpret the results.
+
+```{r}
+# do a logistic regression analysis, for both outcomes
+library(jtools)
+
+model1 <- glm(read1 ~ sex + age2 + screentime, family = binomial(link = "logit"), data = dat)
+model2 <- glm(read2 ~ sex + age2 + screentime, family = binomial(link = "logit"), data = dat)
+
+# results: 
+summary(model1)$coefficients
+summary(model2)$coefficients
+
+jtools::summ(model1, exp = T, confint = T, model.fit = F, digits = 3)
+jtools::summ(model2, exp = T, confint = T, model.fit = F, digits = 3)
+
+# Interpretation:
+## The results are quite different, both in terms of the regression coefficient estimates as well as the p-values!
+## Hence you might come to different conclusions which variables are associated with reading help, depending on which read variable you use. To me, this decreases my trust in the results.
+## One consistent thing seems to be that the odds of neading reading help increase by age (make sense!). Also there is no evidence that screentime is associated with reading help.
+## Interpretation of the coefficients (of the exp(coefficients) from the summ function):
+## e.g. from model to: the OR of 4-5year olds compared to 2-3 year olds is 1.6 i.e. the odds of needing reading help of the 4-5year olds are 1.6 times the odds of of needing reading help of the 2-3year olds.
+```

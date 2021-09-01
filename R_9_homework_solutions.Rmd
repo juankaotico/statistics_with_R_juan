@@ -1,0 +1,204 @@
+---
+title: "Exercise 2: Assumptions in linear regression"
+author: "Stefan Konigorski"
+date: "December 16, 2019"
+output:
+  html_document: default
+---
+
+## Load KiGGS data
+
+```{r}
+#dat_link <- url("https://www.dropbox.com/s/nbh0f6upejh7nr8/data.RData?dl=1")
+#load(dat_link)
+load("C:/Users/stefan.konigorski/Desktop/data_Teaching/KiGGS/KiGGS03_06.RData")
+dat <- KiGGS03_06
+```
+
+## Examine assumptions of exercise 1
+
+**Task:** 
+
+Use linear regression to investigate the question if the amount and frequency of eating pancakes is associated with the BMI of children.
+
+In this model, investigate and judge whether the assumptions listed on slide 17 are satisfied.
+
+**Solution:** 
+
+Here is the model from exercise 1:
+
+```{r}
+# variables and formatting
+bmi <- dat$bmiB
+pancake_amount <- dat$fq41a
+pancake_amount <- factor(pancake_amount, labels = c("never", "1/4 piece or less", "1/2 piece", "1 piece", "2 pieces", "3 pieces or more"))
+pancake_freq <- dat$fq41
+pancake_freq <- droplevels(pancake_freq)
+pancake_freq <- factor(pancake_freq, labels = c("never", "1x/month", "2-3x/month", "1-2x/week", "3-4x/week", "5-6x/week", "1x/day", "2-3x/day", "4-5x/day"))
+
+fit1 <- lm(bmi ~ as.numeric(pancake_amount) + as.numeric(pancake_freq))
+summary(fit1)$coefficients
+
+# compute same model with log-transformed BMI outcome (this is done after inspecting the assumption that the residuals are normally distributed below, which showed that they are skewed):
+bmi_log <- log(bmi)
+fit2 <- lm(bmi_log ~ as.numeric(pancake_amount) + as.numeric(pancake_freq))
+summary(fit2)$coefficients
+```
+
+Look at assumptions:
+
+(1) Y continuous? -> yes
+
+(2) relationship between the X variables and Y continuous?
+
+Look at scatterplots:
+
+```{r}
+plot(as.numeric(pancake_amount), bmi)
+plot(as.numeric(pancake_freq), bmi)
+```
+
+-> hard to say from these whether relationship is linear. This could be further investigated by checking whether the regression coefficients of as.numeric(pancake_amount) and as.numeric(pancake_freq) are similar to the differences between categories when the two predictors are used in a regression model as factors. Since this cannot be done in one model (multicollinearity), try to answer this in separate regression models:
+
+```{r}
+summary(lm(bmi ~ as.numeric(pancake_amount)))$coefficients
+summary(lm(bmi ~ pancake_amount))$coefficients
+
+summary(lm(bmi ~ as.numeric(pancake_freq)))$coefficients
+summary(lm(bmi ~ pancake_freq))$coefficients
+```
+
+-> This quite clearly suggests that the relationship is not linear. Hence the variables should be modeled as factors not with as.numeric. Due to multicollinearity problems, some categories could be excluded or combined. This can also be seen when stratified boxplots are inspected:
+
+```{r}
+# Linear relationship of Y with predictors:
+plot(pancake_amount, bmi)
+plot(pancake_freq, bmi)
+```
+
+(3) All relevant variables (covariates, confounders) are in the model
+
+-> cannot be tested, this would be our assumption
+
+(4) All observations are independent
+
+-> there might be some structure in that students are clustered in schools or districts, or are siblings, but we don't have that information and there is a large sample size, so that assuming they are independent might be ok.
+
+(5) No multicollinearity
+
+-> fit1 looks totally fine, and there is not a very high (but still substantial) correlation between predictors:
+
+```{r}
+cor(as.numeric(pancake_amount), as.numeric(pancake_freq), use = "complete.obs")
+```
+
+However, if the model is fitted with both variables as factors, this is an example of perfect collinearity, so that the effects cannot be estimated of all categories of the factors.
+
+```{r}
+# As a result, you can also not trust the other coeffient estimates, e.g. when you change the order of the variables, you get completely different results:
+summary(lm(bmi ~ pancake_freq + pancake_amount))
+summary(lm(bmi ~ pancake_amount + pancake_freq))
+# Verify this by checking if the design matrix of the model (= matrix with all variables in the model = here: all shown dummy variables of pancake_freq and pancake_amount) has full rank (i.e. there is no variable that is a linear combination of the other variables)
+# For this, check how many dummy variables have been created:
+dim(model.matrix(fit2))
+# -> there are 14 variables in the design matrix. Intercept and 13 dummy variables (5 = 6-1 for pancake_amount; 8 = 10-1 and again -1 for pancake_freq since there is no one in the category ">5x/day")
+# Inspect rank of this matrix (should be the same as the number of columns):
+fit2$rank
+# this can also be computed with: rankMatrix(model.matrix(fit1))
+# -> this is only 13, i.e. does not have full rank
+# (Explanation: there is only 1 person in the category "4-5x/day" of pancake_freq, she is causing problems)
+```
+
+(6) Homoscedastic residuals
+
+```{r}
+# Look at first plot in:
+plot(fit1)
+```
+
+-> higher variance for highter pancake eating values, but there are also more observations there, so maybe this is ok.
+
+(7) Normally-distributed residuals
+
+```{r}
+# Distribution of outcome:
+hist(bmi)
+qqnorm(scale(bmi)); abline(0,1)
+hist(bmi_log)
+qqnorm(scale(bmi_log)); abline(0,1)
+
+# Distribution of residuals, see e.g. second plot in:
+plot(fit1)
+plot(fit2)
+```
+
+-> residuals in log-transformed BMI model look slightly better, but still not normally-distributed.
+
+CONCLUSION: there is quite some evidence that several assumptions are violated in this regression model, so that the model should be improved!
+
+## Exercise 2: Model selection in linear regression
+
+**Task:** 
+
+In the KiGGS dataset, aim to select relevant predictors for sys12 (systolic blood pressure). Use 2 of the model selection approaches described on slide 31, apply them to the KiGGS dataset and compare the results.
+
+**Solution:** 
+
+Lets compare lasso and stepwise model selection using the same predictors.
+
+Stepwise variable selection:
+
+```{r}
+# format variables and get complete case dataset:
+dat_select <- data.frame(sys = as.numeric(as.character(dat$sys12)), age = as.numeric(dat$age2), sex = dat$sex, bmi = as.numeric(as.character(dat$bmiB)), chol = as.numeric(as.character(dat$CHOLX)), gluc = as.numeric(as.character(dat$GLUCX)), iron = as.numeric(as.character(dat$Eisen)))
+dat_select <- dat_select[complete.cases(dat_select), ]
+dim(dat_select)
+# -> ok good, still 13034 observations
+
+library(MASS)
+
+nullmodel <- lm(sys ~ 1, dat = dat_select)
+fullmodel <- lm(sys ~ age + sex + bmi + chol + gluc + iron, dat = dat_select)
+
+stepAIC(object = nullmodel, scope = list(upper = fullmodel, lower = nullmodel), direction = "forward")$anova
+stepAIC(object = fullmodel, scope = list(upper = fullmodel, lower = nullmodel), direction = "backward")$anova
+```
+
+Lasso:
+
+```{r}
+library(glmnet)
+
+# preparation: extract all predictors and transform from data.frame to matrix:
+predictors <- dat_select[, 2:7]
+predictors$sex <- as.numeric(predictors$sex)
+predictors <- as.matrix(predictors)
+
+# lasso:
+fit_lasso <- cv.glmnet(x = predictors, y = dat_select$bmi, alpha = 1, family = "gaussian")
+coef(fit_lasso, s = "lambda.min")
+```
+
+-> while both stepwise selection models select age, sex, bmi, glucose and iron into the final model as relevant variables, lasso only selects bmi!
+
+## Exercise 3: Linear regression with multiple imputation (optional)
+
+**Task:** 
+
+Run the code in the Rmd file R_9d_linear_regression_MI.Rmd, inspect the R code what it is doing, and look at the results. Apply the same to another linear regression model of your choice.
+
+**Solution:** 
+
+```{r}
+library(mice)
+
+# step 1: do imputation, generate 5 imputed datasets, use method 'norm' instead of 'pmm' here since it is faster
+tempData <- mice(dat_select, m = 5, maxit = 50, meth = 'norm', seed = 500)
+
+# step 2: do the statistical analysis with help of the "with" function
+fit_mi <- with(tempData, lm(sys ~ age + sex + bmi + chol + gluc + iron))
+
+# step 3: pool the results
+summary(pool(fit_mi))
+```
+

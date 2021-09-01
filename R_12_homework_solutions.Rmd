@@ -1,0 +1,112 @@
+---
+title: "Homework 12 - solutions"
+author: "Stefan Konigorski"
+date: "January 20, 2020"
+output:
+  html_document: default
+---
+
+## Exercise 1: Linear mixed model for hierarchical data
+
+**Tasks:** 
+
+Load the HRS dataset and do the following preparations:
+
+```{r}
+library(readr)  # not necessary for loading of the dataset, only necessary to show labels and formatting of the dataset correctly
+dat_link <- url("https://www.dropbox.com/s/yox8fvt91ff73ye/hrs.RData?dl=1")
+load(dat_link)
+#load("C:/Users/stefan.konigorski/Desktop/data_Teaching/HRS/CogImp/hrs.RData")
+
+# Preparations
+# rename variable at first timepoint
+names(hrs)[5] <- "R1IMRC"
+# define variable at second timepoint - Integrate the variables R2AIMRC10 and R2HIMRC20, which both capture different subgroups of the sample at the second timepoint.
+table(is.na(hrs$R2AIMRC10)) # -> only ~7000 of ~36000 observations
+table(is.na(hrs$R2HIMRC20)) # -> only ~10000 of ~36000 observations
+table(!is.na(hrs$R2HIMRC20) & !is.na(hrs$R2AIMRC10)) # -> no person has a value at both variables, i.e. the variables complement each other
+hrs$R2IMRC <- rowSums( cbind (hrs$R2AIMRC10, hrs$R2HIMRC20), na.rm=TRUE)
+hrs$R2IMRC[!(!is.na(hrs$R2HIMRC20) | !is.na(hrs$R2AIMRC10))] <- NA
+table(is.na(hrs$R2IMRC))
+# Rescale R1IMRC and R2IMRC onto the same scale as all other variables (measures 3-12 were on a scale of 1-10, measures 1-2 on the scale 1-20)
+hrs$R1IMRC <- hrs$R1IMRC/2
+hrs$R2IMRC <- hrs$R2IMRC/2
+
+# Extract variables for first investigation
+data_IMRC <- data.frame(HHID = hrs$HHID, PN = hrs$PN, HHID_PN = paste(hrs$HHID, hrs$PN, sep = "_"),
+                        T1 = hrs$R1IMRC, T2 = hrs$R2IMRC, T3 = hrs$R3IMRC, T4 = hrs$R4IMRC, T5 = hrs$R5IMRC, T6 = hrs$R6IMRC,
+                        T7 = hrs$R7IMRC, T8 = hrs$R8IMRC, T9 = hrs$R9IMRC, T10 = hrs$R10IMRC, T11 = hrs$R11IMRC, T12 = hrs$R12IMRC)
+```
+
+Answer the following questions: 
+
+a) How many observations are there in the dataset?
+
+b) How many households are there in the dataset (observations are clustered in households)?
+
+c) Now, compute a linear regression model to predict T2 by T1, i.e. the cognitive performance at the second timepoint by the cognitive performance at the first timepoint. Also, compute two linear mixed models, one with random intercept, one with random intercept+slope to predict T2 by T1. Look at the results, i.e. the estimated effect of T1 on T2. Are they similar, or are they very different.
+
+**Solutions:** 
+
+```{r}
+# a) How many observations are there in the dataset?
+head(data_IMRC)
+nrow(data_IMRC)
+# -> there are 36167 observations
+```
+
+```{r}
+# b) How many households are there in the dataset (observations are clustered in households)?
+length(unique(data_IMRC$HHID))
+# -> there are 22996 households.
+# i.e. the 36167 observations are clustered in 22996 households.
+```
+
+```{r}
+# c) 
+
+# linear regression model to predict T2 by T1:
+fit1 <- lm(T2 ~ T1, data = data_IMRC)
+summary(fit1)
+# Interpretation: two participants that differ in their performance at T1 by 1, differ on average by 0.53 in their cognitive performance at T2. This is statistically different to 0.
+```
+
+```{r}
+# linear mixed model with random intercept
+library(nlme)
+fit2a <- lme(T2 ~ T1, random = ~1|HHID, na.action = na.exclude, data = data_IMRC)
+summary(fit2a)
+
+# alternative:
+#library(lme4)
+#fit2b <- lmer(T2 ~ T1 + (1|HHID), data = data_IMRC)
+#summary(fit2b)
+
+# Interpretation: two participants that differ in their performance at T1 by 1, differ on average by 0.53 in their cognitive performance at T2. This is statistically different to 0.
+# i.e. this yields almost identical estimates of the fixed effects. so this fixed estimate doesn't seem to be affected at all by whether the clustering is taken into account or not.
+```
+
+```{r}
+# linear mixed model with random slope
+fit3 <- lme(T2 ~ T1, random = ~T1|HHID, na.action = na.exclude, data = data_IMRC)
+summary(fit3)
+# Interpretation: again, very similar results as above in terms of the the estimate of the fixed effect.
+```
+
+```{r}
+# ICC
+library(psychometric)
+ICC1.lme(dv = T2, grp = HHID, data = data_IMRC)
+
+# Interpretation: 36% of the variance of cognitive performance at the second timepoint can be explained by the clustering variable (households).
+```
+
+## Exercise 2: Linear mixed model for longitudinal data (optional)
+
+**Task:**
+
+Go through R_12b_example_3.Rmd, run the R code, and follow the comments. Write down here 2 things that you learned by doing this, or 2 things that you found interesting. Also write down here 2 questions on things that have not been clear to you in the modeling, or that you want to further investigate.
+
+**Solution:** 
+
+...

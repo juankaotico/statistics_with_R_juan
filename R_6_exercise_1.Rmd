@@ -1,0 +1,51 @@
+---
+title: "Exercise 1"
+author: "Stefan Konigorski"
+date: "November 25, 2019"
+output:
+  html_document: default
+---
+
+## Load KiGGS data
+
+```{r}
+dat_link <- url("https://www.dropbox.com/s/nbh0f6upejh7nr8/data.RData?dl=1")
+load(dat_link)
+
+# Alternative: download data from Moodle, either (i) the raw .sav dataset (SPSS data file) which you need to import, or (ii) the already imported .RData file with:
+# load("/Users/skonigor/Desktop/data_Biostat2/KiGGS/KiGGS03_06.RData")
+# (you need to adapt path)
+
+dat <- KiGGS03_06
+```
+
+## Get subset of KiGGS data
+
+Assume that the 17640 children in the KiGGS are our population. 
+
+Let's mimick a study, draw a random sample of 100 children from this dataset, and compute the mean BMI of boys and girls in this sample.
+
+```{r}
+
+# how many observations are there?
+dim(dat)
+# ok, draw 100 numbers between 1 and 17640 randomly
+idx <- sample(1:17640, size = 100, replace = FALSE)
+# take these observations as subsample
+dat_sample <- dat[idx, ]
+# look at the BMI variable, if it is a numeric variable (it is)
+str(dat_sample$bmiB)
+str(dat_sample$sex)
+# now compute the mean
+mean(dat_sample$bmiB, na.rm = TRUE)
+#mean per sex
+mean(dat_sample$bmiB[dat_sample$sex == "Weiblich"], na.rm = TRUE)
+mean(dat_sample$bmiB[dat_sample$sex == "Männlich"], na.rm = TRUE)
+
+
+
+
+
+```
+
+Are these mean BMI of boys and girls different, can you conclude this for the population?

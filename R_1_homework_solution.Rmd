@@ -1,0 +1,212 @@
+---
+title: "Homework 1 - solutions"
+author: "Stefan Konigorski"
+date: "October 21, 2019"
+output:
+  html_document: default
+---
+
+Task: Download this R file, save it on your computer, and perform all the below tasks by inserting your answer in out-commented text or by inserting R code below. After you are done, upload this file with your solutions on Moodle.
+
+## Exercise 1
+
+**Task**: Save the mtcars data frame as an R data frame on your desktop. After saving it, load it again in RStudio.
+
+**Solution**: The mtcars dataset is pre-loaded in R and RStudio, and can be accessed by simply typing **mtcars**. The **save()** function can be used to save the dataset as an R dataframe, i.e. as an .Rdata file or abbreviated .Rda file. The **load()** function can be used to load .Rdata or .Rda files. Here, R does not distinguish between .rdata and .Rdata by saving/loading, but does distinguish between .Rdata and .Rda.
+
+```{r}
+## As a preparatory step, create new object dat as a copy of the mtcars dataframe
+dat <- mtcars
+```
+
+Save dat (not that the object name in R, **dat** and the name of the file into which it is saved, here **mtcarsdat.Rdata** can be do not have to be the same):
+
+```{r}
+save(dat, file = "mtcarsdat.RData")
+```
+
+Now delete the file from the environment by clicking on the broom symbol in the upper right panel, or by typing in:
+
+```{r}
+rm("dat")
+```
+
+You can then load the file with (see how it appears again in the global environment in the upper right panel:
+
+```{r}
+load(file = "mtcarsdat.RData")
+```
+
+The file **mtcarsdat.Rdata** is then created in the default directory that RStudio uses on your computer. You can find out where this is by running **getwd()**
+
+You can change this directory to any other directory on your computer so that that all files will be saved there, by using the command **setwd()**, e.g. **setwd("C:/Users/stefan.konigorski/Desktop/")**. Alternatively, you can directly specify the path, where the file should be saved:
+
+```{r}
+# This will not run. If you want to run it, remove the '#' and adapt the path.
+# save(dat, file = "C:/Users/stefan.konigorski/Desktop/mtcarsdat.RData")
+```
+
+## Exercise 2
+
+**Task**: Find out some information about the mtcars data frame, for example what the different variable names mean.
+
+**Solution**: For all R objects and functions, the first thing to get more information is always to try and ask for help from R with **?mtcars**
+
+In this case, this gives all information that I would be interested in. Alternatively, asking google or your search engine of choice often helps.
+
+## Exercise 3
+
+**Task**: Use the help functions to find out, what the option 'main' means in the 'hist' function. Explain what it can be used for in 1 sentence, and try to use it in an example.
+
+**Solution**: In order to find out what the **main** option in the **hist()** function means, you can ask the R help with **?hist**. This tells you that you can use the **main** argument to specify the title of the histogram. You can use it, for example:
+
+```{r}
+x <- c(1, 2, 3, 4, 5, 6, 10, 15, 55, 11, 44)
+hist(x = x, main = "This is a histogram of the variable x that I just created")
+```
+
+Another example:
+
+```{r}
+hist(x = mtcars$mpg, main = "Histogram of the mpg variable of the mtcars dataset")
+```
+
+## Exercise 4
+
+**Task**: Install any R package of your choice and try to find out what the functions in the R package can be used for.
+
+**Solution**: Install the **ggplot2**, which has many great functions to create nice graphics.
+
+```{r}
+# To install the package, remove the '#'.
+# install.packages("ggplot2")
+```
+
+Once you have installed the package (which you can verify by checking under 'Packages' in the lower right panel, you can load it into the workspace (so that you can used its functions) with the **library()** command:
+
+```{r}
+# To load the package, remove the '#'.
+# library(ggplot2)
+```
+
+Note: Use quotation marks in the **install.packages()** but not in the **library()** function!
+
+## Exercise 5: import Excel file.
+
+**Task**: Create your own dataset of a fictional study where you record age, sex, and height of 5 friends in an Excel file. Create an Excel file with this information, save the file on your laptop, import the file into RStudio, and save the dataframe as an R object (.RData file).
+
+**Solution**:
+
+Step 1: Create the Excel file. I have save this file as **R_1_homework_ex5.xlsx**, and its content looks as follows:
+
+```{r, echo = FALSE, fig.cap="Figure 1. Screenshot of entries in Excel file.", out.width = '75%'}
+knitr::include_graphics("C:/Users/stefan.konigorski/Dropbox/@HPI/Teaching/0_R_Statistical_Epidemiology/1_WS201920/VL1/R_1_homework_ex5.JPG")
+```
+
+Note that here, I have incorporated a figure (screenshot of the Excel file) in this R Markdown file by using the knitr::include_graphics() function in an R code chunk:
+
+```{r, eval = FALSE, fig.cap="Figure 1. Screenshot of entries in Excel file.", out.width = '75%'}
+knitr::include_graphics("C:/Users/stefan.konigorski/Dropbox/@HPI/Teaching/0_R_Statistical_Epidemiology/1_WS201920/VL1/R_1_homework_ex5.JPG")
+```
+
+Step 2: Import Excel file into R, and save it as Rdata file:
+install.packages("readxl") 
+```{r}
+# First, need to figure out that the read_excel() function is not available automatically. It is a function in the readxl package, so in order to use it, the package has to be installed first and then loaded. 
+
+#This only has to be done once, so I am commenting this out here so that it doesn't install the R package everytime I am knitting this R Markdown file.
+#install.packages("readxl") 
+
+# If you really want to incorporate it here without commenting it out, you have to specify the repository, from where it should be downloaded:
+#install.packages("readxl", repos = 'http://cran.us.r-project.org')
+
+# While the package has only to be installed once, you have to load it each time you want to use a function with library():
+library(readxl)
+
+# Now, import the R_1_homework_ex5.xlsx file
+
+dat_ex5 <- read_excel("C:/Users/stefan.konigorski/Dropbox/@HPI/Teaching/0_R_Statistical_Epidemiology/1_WS201920/VL1/R_1_homework_ex5.xlsx", sheet = 1)
+
+head(dat_ex5)
+
+# Save
+save(dat_ex5, file = "C:/Users/stefan.konigorski/Dropbox/@HPI/Teaching/0_R_Statistical_Epidemiology/1_WS201920/VL1/R_1_homework_ex5.RData")
+```
+
+## Exercise 6 (optional)
+
+**Task**: Use the **read.csv()** and the **read_csv()** functions to import the Pima diabetes csv dataset, and compare the datasets that are created in R. Are there differences, are there big differences, what are the differences?
+
+**Solution**:
+
+```{r}
+# As in exercise 5, figure out that the read_csv() function is not available automatically. It is a function in the readr package, so in order to use it, the package has to be installed first and then loaded.
+
+# Install package
+# install.packages("readr")
+
+# Load package
+library(readr)
+
+# Now read data both using the read.csv() and read_csv() functions
+dat_ex3_vs1 <- read.csv(file = url("https://www.dropbox.com/s/4s4rhf6abda6gw2/Pima_diabetes.csv?dl=1"))
+dat_ex3_vs2 <- readr::read_csv(file = url("https://www.dropbox.com/s/4s4rhf6abda6gw2/Pima_diabetes.csv?dl=1"))
+
+head(dat_ex3_vs1)
+head(dat_ex3_vs2)
+
+str(dat_ex3_vs1)
+str(dat_ex3_vs2)
+```
+
+At first glance, the two functions don't do very different things, read all values in identically, and only code the variables as integers/numerical values and with additional attributes (i.e. information) using the read_csv() function. Both allow to specify the class of each column variable (e.g. logical, numeric, factor, Date) using the arguments colClasses (in the read.csv() function) and col_types (in the read_csv() function).
+
+The differences between the functions in how they store the dataframes becomes apparent and relevant in more advanced R programming: read_csv() is better at automatically "recognizing" the correct data format (e.g. here date) and does not convert character/date variables factors, and is much faster:
+
+```{r}
+# import data
+dat_ex5_vs1 <- read.csv(file = url("https://www.dropbox.com/s/4s4rhf6abda6gw2/Pima_diabetes.csv?dl=1"))
+dat_ex5_vs2 <- readr::read_csv(file = url("https://www.dropbox.com/s/4s4rhf6abda6gw2/Pima_diabetes.csv?dl=1"))
+
+# compute internal size of data frames in workspace:
+object.size(dat_ex5_vs1)
+object.size(dat_ex5_vs2)
+
+# show the time how long it takes to import files
+system.time(dat_ex5_vs1 <- read.csv(file = url("https://www.dropbox.com/s/4s4rhf6abda6gw2/Pima_diabetes.csv?dl=1")))
+system.time(dat_ex5_vs2 <- readr::read_csv(file = url("https://www.dropbox.com/s/4s4rhf6abda6gw2/Pima_diabetes.csv?dl=1")))
+
+# illustrate the functions again for a larger dataset:
+
+# import data and show the time how long it takes to import files
+system.time(dat_ex6_vs_1 <- read.csv(file = "C:/Users/stefan.konigorski/Desktop/data_Teaching/NoShow/KaggleV2-May-2016.csv"))
+system.time(dat_ex6_vs_2 <- readr::read_csv(file = "C:/Users/stefan.konigorski/Desktop/data_Teaching/NoShow/KaggleV2-May-2016.csv"))
+
+# compute internal size of data frames in workspace:
+object.size(dat_ex6_vs_1)
+object.size(dat_ex6_vs_2)
+
+# show data
+head(dat_ex6_vs_1)
+head(dat_ex6_vs_2)
+```
+
+## Exercise 7: Import and check data (optional)
+
+**Task**: Download the NoShow csv data (KaggleV2-May-2016(1).csv) and import it into R. Now check the data, (i) whether all variables have been imported correctly and (ii) if all values in the dataset make sense and seem correct.
+
+**Solution**:
+
+```{r}
+# load readr package
+library(readr)
+
+# import
+dat_ex7 <- readr::read_csv(file = "C:/Users/stefan.konigorski/Desktop/data_Teaching/NoShow/KaggleV2-May-2016.csv")
+
+# very quick check of data values:
+head(dat_ex7)
+summary(dat_ex7)
+```
+
+this already shows that among others, one person has age -1 (one other issue: time and date of scheduled and appointment day)

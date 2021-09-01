@@ -1,0 +1,35 @@
+---
+title: "Mixed models 2 - Example 2"
+author: "Stefan Konigorski"
+date: "January 20, 2020"
+output:
+  html_document: default
+---
+
+## Overview
+
+Use the Blackmore dataset in the car R package. It describes 138 girls with eating disorders and 98 girls from a control group, regarding their age and exercise behaviour.
+
+Aim: Describe the exercise behaviour over time (age) and by the group.
+
+```{r}
+library(car)
+data("Blackmore")
+dat <- Blackmore
+
+# Inspect dataset
+str(dat)
+summary(dat)
+
+# Preparation
+boxplot(exercise ~ group, data = dat) # exercise should be log-transformed
+dat$log.exercise <- log(dat$exercise + 0.02) 
+boxplot(log.exercise ~ group, data = dat, ylab="log(exercise)")
+
+hist(dat$exercise)
+hist(dat$log.exercise) 
+
+# Do analyses
+...
+
+```

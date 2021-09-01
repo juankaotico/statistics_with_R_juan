@@ -1,0 +1,72 @@
+---
+title: "Homework 11 - solutions"
+author: "Stefan Konigorski"
+date: "January 13, 2020"
+output:
+  html_document: default
+---
+
+## Load KiGGS data
+
+```{r}
+#dat_link <- url("https://www.dropbox.com/s/nbh0f6upejh7nr8/data.RData?dl=1")
+#load(dat_link)
+load("C:/Users/stefan.konigorski/Desktop/data_Teaching/KiGGS/KiGGS03_06.RData")
+dat <- KiGGS03_06
+```
+
+## Exercise 1: Analysis of variance
+
+**Task:** 
+
+Choose 1 suitable outcome variable of interest, 2 factors, and 1 quantitative covariate, and compute 5 ANOVA models: (i-ii) one model with each factors separately, (iii) one model with both factors, (iv) one model with both factors and their interaction, (v) one model with both factors, their interaction, and the covariate.
+
+Interpret the results: which factor is associated with the outcome? Is there a significant interaction effect? Does anything change after adjusting for the covariate?
+
+**Solution:** 
+
+Predict serum glucose levels (GLUCX) by BMI group (bmiKH) and sex (sex), by adjusting for physical wellbeing (kw100.e)
+
+```{r}
+# Preparation:
+dat$GLUCX <- as.numeric(as.character(dat$GLUCX))
+dat$kw100.e <- as.numeric(as.character(dat$kw100.e))
+dat$bmiKH <- factor(dat$bmiKH, labels = c("strong underweight", "underweight", "normal weight", "overweight", "obese"))
+dat$sex <- factor(dat$sex, labels = c("boys", "girls"))
+
+# Models:
+summary(aov(GLUCX ~ sex, data = dat))
+summary(aov(GLUCX ~ bmiKH, data = dat))
+summary(aov(GLUCX ~ sex + bmiKH, data = dat))
+summary(aov(GLUCX ~ sex*bmiKH, data = dat))
+summary(aov(GLUCX ~ kw100.e + sex*bmiKH, data = dat)) # -> here, you want to remove the effect of the covariate first, and then test the association with the factors. For this you have to include kw100.e as first variable
+```
+
+Interpretation: glucose levels differ between boys and girl (since p-value of sex term is <2e-16), also glucose levels differ between BMI groups (p-value = 4.44e-05). This also doesn't change after adjusting for physical wellbeing as a covariate. Finally, there is no indication for an interaction effect of sex and BMI categories on glucose levels.
+
+## Exercise 2: Posthoc tests in analysis of variance
+
+**Task:** 
+
+Perform posthoc t-tests with and without a correction for multiple testing for the ANOVA in exercise 1, where we tested whether systolic blood pressure differed between age groups.
+
+**Solution:** 
+
+```{r}
+# Preparation:
+dat$sys12 <- as.numeric(as.character(dat$sys12))
+dat$age2 <- factor(dat$age2, labels = c("0-1y", "2-3y", "4-5y", "6-7y", "8-9y", "10-11y", "12-13y", "14-15y", "16-17y"))
+
+# ANOVA:
+fit1 <- aov(sys12 ~ age2, data = dat)
+summary(fit1)
+
+# pairwise.t.test needs also data without missing values, hence use data_for_analysis
+data_for_analysis <- data.frame(sys12 = dat$sys12, age2 = dat$age2)
+data_for_analysis <- data_for_analysis[complete.cases(data_for_analysis), ]
+pairwise.t.test(data_for_analysis$sys12, data_for_analysis$age2, p.adj = "none") # no correction for multiple testing 
+pairwise.t.test(data_for_analysis$sys12, data_for_analysis$age2, p.adj = "bonf") # Bonferroni correction for multiple testing
+TukeyHSD(fit1, "age2")
+```
+
+Interpretation: the mean systolic blood pressure values are different between all groups, also after correcting for multiple testing, except for between age 2-3y and 4-5y.

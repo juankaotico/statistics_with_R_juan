@@ -1,0 +1,77 @@
+---
+title: "Homework 6"
+author: "Juan Carlos Niño"
+date: "December 1, 2019"
+output:
+  html_document: default
+---
+
+Download this R Markdown file, save it on your computer, and perform all the below tasks by inserting your answer in text or by inserting R chunks below. After you are done, upload this file with your solutions on Moodle.
+
+## Exercise 1: Statistical tests
+
+a) In the KiGGS dataset, perform a 2-sample t-test for paired samples (i.e. dependent samples) for the two variables 'sys1' and 'sys2'. Interpret the results.
+
+#load the data
+
+dat_link <- url("https://www.dropbox.com/s/nbh0f6upejh7nr8/data.RData?dl=1")
+load(dat_link)
+
+dat <- KiGGS03_06
+
+# ok, draw 100 numbers between 1 and 17640 randomly
+idx <- sample(1:17640, size = 100, replace = FALSE)
+# take these observations as subsample
+dat_sample <- dat[idx, ]
+
+#visualize each variable
+dat_sample$sys1
+str(dat_sample$sys1)
+is.factor(dat_sample$sys1)
+summary(dat_sample$sys1)
+
+dat_sample$sys2
+str(dat_sample$sys2)
+is.factor(dat_sample$sys2)
+summary(dat_sample$sys2)
+
+#transform it into numbers
+dat_sys1 <- as.numeric(dat_sample$sys1)
+dat_sys2 <- as.numeric(dat_sample$sys2)
+
+#Test
+t.test(dat_sys1, dat_sys2 , paired = TRUE, alternative = "two.sided")
+
+
+#results
+##in this test we are comparing the systolic blood presure of the same sample population in time, with a p-value smaller that 0.05 and a mean of the differences of -2.1, we can interpret this as a reduction of 2,1 % in the systolic pressure measurement after the treatment or project (intervention) was implemented and is effectivly coorelated (p-value) 
+
+
+
+b) In the KiGGS dataset, select one metric and one binary variable (or create one) and perform a 2-sample t-test. Then do a Mann-Whitney U-test with the same variables, explore the function to do this, and compare the results to the t-test.
+
+#Using the BMI as a metric variable and the sex as binary
+
+female <- dat_sample$bmiB[dat_sample$sex == "Weiblich"]
+male <- dat_sample$bmiB[dat_sample$sex == "Männlich"]
+
+#t-test
+t.test(female,male)
+#Mann-Whitney U-test
+###to use this test the wilcoxon rank test is used with the following default structure
+###wilcox.test(x, y = NULL, alternative = c("two.sided", "less", "greater"), mu = 0, paired = FALSE, exact = NULL, correct =               TRUE, conf.int = FALSE, conf.level = 0.95, ...)
+
+wilcox.test(female, male)
+
+#in the first test the difference of the means is used, in the second one the ranks are the ones used. both p-values are greather than the significant 0.05 failing to prove any correlation between the samples.
+
+
+## Exercise 2: Study planning (optional)
+
+Compute the sample size using R or G*Power, for a study that investigates the  question if biking to the HPI helps you to better concentrate in class or not.
+
+Think about how you can formulate this study question in terms of variables, and which statistical test (that we have covered in class 6) would be appropriate for this.
+
+a) Which test could you use?
+
+b) Which sample size is necessary, to find a true effect with 80\% power at $\alpha=0.05$ using this statistical test?

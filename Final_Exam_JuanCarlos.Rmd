@@ -1,0 +1,539 @@
+---
+title: "Final Exam"
+author: "Juan Carlos"
+date: "18/2/2020"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+# Question 1 - Creation of this file [5 points]
+
+# Question 2 ‐ Import, extract and save data [10 points]
+
+
+**a) Download the SPSS data file KiGGS03_06.sav from moodle and import it into R. [2 points]**
+
+
+
+```{r}
+##Load and Read Dataset
+#getwd()
+setwd("C:/Users/Juan Carlos/Desktop/HPI/Semestre III/Stadistics with R/repository SWR")
+#install.packages("tidyverse")
+library(haven)
+dat <- read_sav("KiGGS03_06.sav")
+```
+
+**b) Create a new dataframe in R named kiggs, which contains all variables for the analysis (E070M, E070V, E072, E074, arztZ01, kw100.e, bmiB, sex, age2, schichtz, e0622, e0623, e065z). [3 points]**
+
+Head of dataframe:
+```{r}
+kiggs <- data.frame("E070M"=dat$E070M,
+                    "E070V"=dat$E070V, 
+                    "E072"=dat$E072, 
+                    "E074"=dat$E074, 
+                    "arztZ01"=dat$arztZ01, 
+                    "bmiB"=dat$bmiB, 
+                    "sex"=dat$sex, 
+                    "age2"=dat$age2, 
+                    "schichtz"=dat$schichtz, 
+                    "e0622"=dat$e0622, 
+                    "e0623"=dat$e0623, 
+                    "e065z"=dat$e065z,
+                    "kw100.e"=dat$kw100_e)
+head(kiggs)
+```                   
+
+*Questions 2c) – 2e) are based on this dataframe kiggs, but can also be done using the provided dataframe kiggs_finalexam.RData, if there are difficulties during importing.*
+
+
+**c) Run the formatting steps in the provided Rmd file data_formatting.Rmd [1 point] **
+
+```{r}
+kiggs$E070M    <- factor(kiggs$E070M,    labels = c("yes, daily", "yes, occasionally", "no"))
+kiggs$E070V    <- factor(kiggs$E070V,    labels = c("yes, daily", "yes, occasionally", "no"))
+kiggs$E072     <- factor(kiggs$E072,     labels = c("yes, regularly", "yes, from time to time", "no, never"))
+kiggs$E074     <- factor(kiggs$E074,     labels = c("yes, regularly", "yes, from time to time", "no, never", "has not breastfed"))
+kiggs$sex      <- factor(kiggs$sex,      labels = c("boys", "girls"))
+kiggs$age2     <- factor(kiggs$age2,     labels = c("0-1y", "2-3y", "4-5y", "6-7y", "8-9y", "10-11y", "12-13y", "14-15y", "16-17y"))
+kiggs$schichtz <- factor(kiggs$schichtz, labels = c("low social status", "medium social status", "high social status"))
+kiggs$e0622    <- factor(kiggs$e0622,    labels = c("almost daily", "3-5x per week", "1-2x per week", "fewer", "never"))
+kiggs$e0623    <- factor(kiggs$e0623,    labels = c("almost daily", "3-5x per week", "1-2x per week", "fewer", "never"))
+```
+
+  **Explain in one sentence what these are doing. [1 point]**
+
+--Formatting of the values is taking place. The German labels are being change to English. For improving the readability
+
+
+
+**d) Save this formatted dataframe on your computer, e.g. on your desktop. [2 points]**
+
+File saved in 
+```{r}
+save(kiggs,file="kiggs_exam.Rda")
+getwd()
+```
+as "kiggs.Rda"
+
+
+
+**e) Give the R command how to load this dataframe into R. [1 point]**
+```{r}
+load("kiggs_exam.Rda")
+```
+
+
+
+# Question 3 ‐ Data transformations and data checks [20 points]
+
+**a) Creation ov variable "burdenS"**
+
+
+*- Check that the variables E070M, E070V, E072, E074 are all factors. If they are not, transform them into factors. [3 points]*
+
+```{r}
+str(kiggs$E070M)
+str(kiggs$E070V)
+str(kiggs$E072)
+str(kiggs$E074)
+```
+They are all factors.
+
+
+
+*- Set the value "has not breastfed" of variable E074 to NA for all children. [1 point]*
+```{r}
+kiggs$E074[kiggs$E074=="has not breastfed"]<-NA
+```
+
+*- Delete this now empty factor level from the variable. [1 point]*
+```{r}
+kiggs$E074 <- droplevels(kiggs$E074, exclude=NA) 
+```
+
+
+*- Check whether these two steps worked as intended. [2 points]*
+```{r}
+summary(kiggs$E074)
+str(kiggs$E074)
+```
+As we can see, E074 has only now 3 levels plus the NA's, now the 4 variables have the same ammount of levels.
+
+
+*Now calculate the new variable burdenS as the sum of the ranks of the four variables E070M, E070V, E072, E074 for each person (i.e. sum of the numerical factor levels). [5 points]*
+
+--Values for each category
+```{r}
+table(kiggs$E070M)    #Mother smoking
+table(kiggs$E070V)    #Father smoking 
+table(kiggs$E072)     #Mother smoking during pregnancy
+table(kiggs$E074)     #Mother smoking during breastfeeding
+```
+
+--Variable burdenS creation
+```{r}
+E070M_number <- as.numeric(as.factor(kiggs$E070M))
+E070V_number <- as.numeric(as.factor(kiggs$E070V))
+E072_number <- as.numeric(as.factor(kiggs$E072))
+E074_number <- as.numeric(as.factor(kiggs$E074))
+
+burdenS <- rowSums((cbind(E070M_number, E070V_number, E072_number, E074_number)), na.rm = TRUE)
+table(burdenS)
+```
+--The higher the value, the higher the level of exposure of the children to the smoke. (Each of the 4 variables has  3 categories (0-12))
+
+
+ **b) Generate a new dichotomous variable called sport**
+
+Check the values
+```{r}
+#library(dplyr)
+table(kiggs$e0622)    #Frequency of sports inside a club
+table(kiggs$e0623)    #Frequency of sports outside a club 
+```
+
+
+Here I will evaluate each variable separately and set the threshold in: 
+"a lot" = "almost daily", "3-5 per week", and " 1-2 per week"; and
+"little" = "fewer" and "never".
+
+
+Then I will add them following the criteria: 
+"a lot" + " a lot" = "a lot";
+"a lot" + "little" = "a lot";
+"little" + "little" = "little".
+```{r}
+
+#transform "alomst daily", "3-5 per week", and " 1-2 per week" into "a lot" and "fewer" and "never" into "little"
+exercise_in <- kiggs$e0622
+levels(exercise_in) <- c("a lot", "a lot", "a lot", "little", "little")
+exercise_out <- kiggs$e0623
+levels(exercise_out) <- c("a lot", "a lot", "a lot", "little", "little")
+
+#changing to numbers to add them
+sport_in <- as.numeric(as.factor(exercise_in))
+sport_out <- as.numeric(as.factor(exercise_out))
+
+#addition of the values
+sport <- rowSums((cbind(sport_in, sport_out)), na.rm = TRUE)
+sport <- as.factor(sport)
+
+#transform back to factors with the previusly stablished criteria, Here the NA's are assumed to be "little"
+levels(sport) <- c("little", "little", "little", "a lot", "a lot")
+table(sport)
+```
+
+ **c) Add these two variables into the kiggs dataset and save it**
+ 
+Add variables
+```{r}
+
+kiggs$burdenS <- burdenS
+kiggs$sport <- sport
+
+```
+ 
+ 
+ 
+ Save as RData
+```{r}
+
+save(kiggs,file="kiggs_exam.Rda")
+load("kiggs_exam.Rda")
+
+```
+ 
+ 
+ 
+
+# Question 4 ‐ Descriptive statistics and graphs [30 points]
+
+
+**a) Describe the variables age2, sex, bmiB, arztZ01, kw100.e, burdenS**
+ 
+ 
+ *What is the scale (measurement level) of each of these 6 variables (nominal, ordinal, metric)? [3 points]*
+ 
+ 
+```{r}
+str(kiggs$age2)      #Ordinal
+```
+age2 = Ordinal 
+ 
+```{r}
+str(kiggs$sex)       #Nominal      „dichotomous“              
+```
+sex = Nominal "dichotomous"
+ 
+```{r}       
+str(kiggs$bmiB)      #Metric             
+```
+bmiB = Metric
+ 
+```{r}
+median(kiggs$arztZ01, na.rm = T)   #Metric     
+```
+arztZ01 = Metric
+ 
+```{r}
+str(kiggs$kw100.e)#Metric
+```
+kw100.e = Metric (although we know the more the better, it cannot be categorized)
+
+```{r}
+str(kiggs$burdenS)   #Ordinal
+```
+burdenS = Ordinal (our new variable indicate the higher the worse)
+ 
+*Which descriptive statistic is best suited to describe it*
+
+age2 (Ordinal) = Frequencies = Multiple variables, but here we want to look how is the distribution of the poblation by an external factor, that is not dependent of any disease or outcome. You just have "certain" age and that's all.
+
+sex (Nominal) = Frequencies = Only two values possible
+
+bmiB (Metric) = mean/SD = a lot of numeric values, where we have a "healthy rank", then we want to see how much is these data deviated
+
+arztZ01 (Metric) = median/interquartile distance = This value is not directly associated with increase on the health or not, and with the extreme values in consideration, here will be more usefull to get proportions based in the quartiles
+
+kw100.e (Metric) = mean/SD = continuos numerical variable where the optimal value is at the top, we want to see how much is the mean of our population and this deviation
+
+burdenS (Ordinal) = median/interquartile distance = there is a "defined" number of values and with the quartiles we can see nicely the distribution of the data.
+
+*Calculate the descriptive statistics that you have chosen and display them in a table [12 points].*
+
+
+```{r, results = "asis"}
+# install.packages("qwraps2")
+#I added the additional variable.
+kiggs$E072N <- as.numeric(as.factor(kiggs$E072))
+library(qwraps2)
+options(qwraps2_markup = "markdown")
+
+our_summary0 <-
+  list("Age of children" =
+       list("0-1y" = ~ qwraps2::n_perc0(.data$age2 == "0-1y", show_symbol = TRUE, na_rm = TRUE),
+            "2-3y" = ~ qwraps2::n_perc0(.data$age2 == "2-3y", show_symbol = TRUE, na_rm = TRUE),
+            "4-5y" = ~ qwraps2::n_perc0(.data$age2 == "4-5y", show_symbol = TRUE, na_rm = TRUE),
+            "6-7y" = ~ qwraps2::n_perc0(.data$age2 == "6-7y", show_symbol = TRUE, na_rm = TRUE),
+            "8-9y" = ~ qwraps2::n_perc0(.data$age2 == "8-9y", show_symbol = TRUE, na_rm = TRUE),
+            "10-11y" = ~ qwraps2::n_perc0(.data$age2 == "10-11y", show_symbol = TRUE, na_rm = TRUE),
+            "12-13y" = ~ qwraps2::n_perc0(.data$age2 == "12-13y", show_symbol = TRUE, na_rm = TRUE),
+            "14-15y" = ~ qwraps2::n_perc0(.data$age2 == "14-15y", show_symbol = TRUE, na_rm = TRUE),
+            "16-17y" = ~ qwraps2::n_perc0(.data$age2 == "16-17y", show_symbol = TRUE, na_rm = TRUE)),
+       "Sex of children" =
+       list("Boys" = ~ qwraps2::n_perc0(.data$sex == "boys", show_symbol = TRUE, na_rm = TRUE),
+            "Girls" = ~ qwraps2::n_perc0(.data$sex == "girls", show_symbol = TRUE, na_rm = TRUE)),
+        "BMI" =
+       list("Mean (SD)" = ~ qwraps2::mean_sd(.data$bmiB, denote_sd = "paren", na_rm = TRUE, show_n = "never")),
+       "Number of visits to the paediatrician" =
+       list("Median (IQR)" = ~ median_iqr(.data$arztZ01, na_rm = TRUE)), 
+       "KINDL Index" =
+       list("Mean (SD)" = ~ qwraps2::mean_sd(.data$kw100.e, denote_sd = "paren", na_rm = TRUE, show_n = "never")),
+       "Level of exposure to smoke (burdens)" =
+       list("Median (IQR)" = ~ median_iqr(.data$burdenS, na_rm = TRUE)),
+       "Level of exposure to smoke (Mother smoking in prenancy)" =
+       list("Median (IQR)" = ~ median_iqr(.data$E072N, na_rm = TRUE))
+       )
+summary_table(kiggs, our_summary0)
+
+```
+
+
+*Indicate how many missing values each variable has, and how many observations have complete data for all 6 variables*
+
+
+```{r}
+table(is.na(kiggs$age2)) 
+```
+Age has 0 missing values
+
+```{r}
+table(is.na(kiggs$sex))
+```
+Sex has 0 missing values
+
+```{r}
+table(is.na(kiggs$bmiB))
+```
+BMI has 147 missing values
+
+
+
+```{r}
+table(is.na(kiggs$arztZ01))
+```
+Paed. visits has 694 missing values
+
+```{r}
+table(is.na(kiggs$kw100.e))
+```
+KINDL has 3483 missing values
+
+```{r}
+table(is.na(kiggs$burdenS)) 
+```
+burdenS has 0 missing values
+
+```{r}
+table(is.na(kiggs$E072N))
+```
+Mothers smokers has 552 missing values
+
+
+
+```{r}
+table(is.na(kiggs$kw100.e)|is.na(kiggs$bmiB)|is.na(kiggs$arztZ01)|is.na(kiggs$E072N))
+```
+There are 4111 observations with some missing value (if using the mothers smokers variable), thus there are 13529 complete observations.
+
+
+**b) Select and create barplots or histograms.**
+
+
+age2 (Ordinal) = Barplot
+
+sex (Nominal) = Barplot
+
+bmiB (Metric) = Histogram
+
+arztZ01 (Metric) = Histogram
+
+kw100.e (Metric) = Histogram
+
+burdenS (Ordinal) = Barplot
+
+
+```{r}
+
+library(ggplot2)
+
+# age
+ggplot(data = kiggs, mapping = aes(x = age2)) + geom_bar()
+# sex
+ggplot(data = kiggs, mapping = aes(x = sex)) + geom_bar()
+# bmi
+ggplot(data = kiggs, aes(bmiB)) + geom_histogram()
+# Paed. visits
+ggplot(data = kiggs, aes(arztZ01)) + geom_histogram()
+# KINDL
+ggplot(data = kiggs, aes(kw100.e)) + geom_histogram(binwidth = 7)
+# burdenS
+ggplot(data = kiggs, mapping = aes(x = burdenS)) + geom_bar()
+# E072
+ggplot(data = kiggs, mapping = aes(x = E072N)) + geom_bar()
+
+```
+
+
+
+
+# Question 5 ‐ Correlation [10 points]
+
+**a) Calculate the Pearson correlation coefficient of the generated smoking variable E072 with the variables arztZ01, kw100.e and bmiB.**
+
+
+```{r}
+#create a subset
+sub_kiggs <- kiggs[, c(3,5,6,13)]
+head(sub_kiggs)
+
+E072 <- as.numeric(as.factor(sub_kiggs$E072))
+arztZ01 <- as.numeric(as.character(sub_kiggs$arztZ01))
+kw100.e <- as.numeric(as.character(sub_kiggs$kw100.e))
+bmiB <- as.numeric(as.character(sub_kiggs$bmiB))
+
+cor(data.frame(E072,arztZ01,kw100.e,bmiB), use = "complete.obs", method = "pearson")
+
+cor.test(E072, arztZ01, alternative = c("two.sided"), method = "pearson")
+
+cor.test(E072, kw100.e, alternative = c("two.sided"), method = "pearson")
+
+cor.test(E072, bmiB, alternative = c("two.sided"), method = "pearson")
+
+```
+
+**b) Interpret the result of the significance tests**
+
+
+Is E072 associated with arztZ01? 
+--The test shows a negative poor correlation being close to 0, with -0.019. A p-value of 0.0127 suggest that this is not a significance result
+  
+Is E072 associated with kw100.e?
+--The test shows a positive poor correlation being close to 0, with 0.0484, A p-value of 1.048e-08 suggest that this is a significance result
+
+
+Is E072 associated with bmiB?
+--The test shows a negative poor correlation being close to 0, with -0.060, A p-value of 2.615e-15 suggest that this is a significance result.
+
+
+**c) Do you think that Pearson’s correlation coefficient is an appropriate statistic here, or do you think that Spearman correlation coefficient would have been more appropriate?**
+
+Pearsons correlation is "well-suited for normally distributed variables", whereas Spearman is "based on ranks". Taking a look into the plots of the previous point is visible that the variables E072, arztZ01, and kw100.e are not normally distributed, thus Spearman's would make a better choice.
+
+
+
+
+# Question 6 ‐ Linear Regression [15 points]
+
+
+**a) Which variable of arztZ01, kw100.e or bmiB should be the outcome, and why?**
+--bmiB is continuous and is more relevant to overall health, plus only has 147 missing data points.
+
+**b) Now calculate a linear regression, with this outcome and the predictors burdenS(will use E072), sex, age2, schichtz, sport and e065z.**
+
+```{r}
+#prepare the data
+
+bmiB <- as.numeric(as.character(kiggs$bmiB))
+E072 <- as.numeric(as.factor(kiggs$E072))
+sex <- kiggs$sex
+age <- kiggs$age2
+schichtz <- kiggs$schichtz
+sleep <-  as.numeric(as.character(kiggs$e065z))
+
+
+
+fit1 <- lm(bmiB ~ E072 + sex + age + schichtz + sleep + sport)
+summary(fit1)
+
+```
+
+*Justify your variables*
+
+bmiB = because is a continuous numerical variable
+E072 = because here we are checking if any number different from 0 affects the regression
+sex = nominal variable to differentiate
+age = ordinal variable that discriminate trough the age
+schichtz = we have a classification regarding the social status that needs to be discriminated
+sleep = number of hours, a numerical variable
+sport =  has only 2 factors, that worths to diferentiate.
+
+
+**c) Answer the question of whether the smoking behavior of parents has an influence on the health of children**
+
+The regression coefficient is -0.2512. This means that when the mother is a smoker the bmiB of the children reduces in 0.2512 compare to those whose parents don't smoke. If we have in mind that this might lead to malnutrition and increase the health risk of the children. Its 95% confidence interval is ± 2sd = ± 2(0.041). and with p-value a 1.75e-09 of significance. There is a small association, but there is as I already said.
+
+**d) Has the conclusion changed (whether there is an association) compared to the conclusion from question 5 based on the correlation?**
+
+Shows a negative small correlation as in point 5. the idea maintains the same, Correlation but minimal.
+
+**e) Correlation with the area**
+
+```{r}
+#nlme::lme(arztZ01 ~ burdenS + sex + age2 + schichtz + sport + e065z, random = ~1|area, data = kiggs)
+```
+
+# Question 7 ‐ Logistic Regression [10 points]
+
+**a) create a binary variable from arztZ01 (0 visits vs. more than 0 visits) or bmiB (BMI lower than 20 vs. BMI higher or equal to 20) as outcome for the analysis. [2 points]**
+
+
+```{r}
+#prepare the data
+bmiBinario <- ifelse(bmiB>20, 1, 0)
+```
+
+**b) Now calculate a logistic regression with this outcome and the predictors burdenS, sex, age2, schichtz, sport and e065z. [2 points]**
+
+```{r}
+E072 <- as.numeric(as.factor(kiggs$E072))
+sex <- kiggs$sex
+age <- kiggs$age2
+schichtz <- kiggs$schichtz
+sleep <-  as.numeric(as.character(kiggs$e065z))
+
+
+
+fit2 <- glm(bmiBinario ~ as.numeric(as.factor(kiggs$E072)) + sex + age + schichtz + sleep + sport, family = binomial(link = "logit"), data = kiggs)
+summary(fit2)
+library(jtools)
+jtools::summ(fit2, exp = T, confint = T, model.fit = F, digits = 3)
+
+```
+
+
+**c) Answer the question of whether the smoking behavior of parents has an influence on the health of children**
+
+Now with a logarithmic regression, the coefficient is -0.29015. with a p-value 2.15e-05 of significance. and a 95% confidence interval of = ± 2(0.068).
+The exponentiated regression coefficient is 0.748, this means that the odds of children have bmiB under 20 is 25.2% smaller in kids whose parents do not smoke compare to those who do. Here the 95% interval coefficients are  0.654-0.855 with a P smaller than 0.000 which means a highly significant result. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

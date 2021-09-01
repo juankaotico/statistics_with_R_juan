@@ -1,0 +1,146 @@
+---
+title: "Mixed models 2 - Example 2"
+author: "Stefan Konigorski"
+date: "January 20, 2020"
+output:
+  html_document: default
+---
+
+## Overview
+
+Use the Blackmore dataset in the car R package. It describes 138 girls with eating disorders and 98 girls from a control group, regarding their age and exercise behaviour.
+
+Aim: Describe the exercise behaviour over time (age) and by the group.
+		
+```{r}
+library(car)
+data("Blackmore")
+dat <- Blackmore
+
+# Inspect dataset
+head(dat)
+str(dat)
+summary(dat)
+
+# Look at distribution of exercise, in histogram, and stratify by group with boxplot
+hist(dat$exercise)
+boxplot(exercise~group, data = dat) 
+# -> exercise has skewed distribution
+
+# Preparation: log-transform exercise, add small constant so that values of 0 don't become NA
+dat$log.exercise <- log(dat$exercise + 0.02) 
+
+# Look at distribution of log.exercise
+boxplot(log.exercise~group, data = dat, ylab="log(exercise)")
+hist(dat$log.exercise)
+# Conclusion: variable is closer to normal distribution, but still the transformation has brough the variable to a normal distribution, since the 0 values are still highly present. It would hence be better to model the original variable in another distribution in a GLMM, but we will look at a linear mixed model here for illustration:
+```
+
+Regression models:
+
+```{r}
+library(ggplot2)
+
+# Linear regression model, only predicting exercise by age:
+fit1a <- lm(log.exercise ~ age, data = dat)
+summary(fit1a)
+AIC(fit1a)
+pred.fit1a <- predict(fit1a)
+ggplot(dat, aes(x = age, y = log.exercise, group = group, colour = group)) + 
+  geom_point() +
+  stat_summary(aes(y = pred.fit1a, group = group, colour = group), fun.y = mean, geom = "line")
+# -> just a line since group is not in the model, i.e. the same is predicted for both groups
+```
+
+```{r}
+# Linear regression model, predict exercise by age and group:
+fit1b <- lm(log.exercise ~ age + group, data = dat)
+summary(fit1b)
+AIC(fit1b)
+pred.fit1b <- predict(fit1b)
+ggplot(dat, aes(x = age, y = log.exercise, group = group, colour = group)) + 
+  geom_point() +
+  stat_summary(aes(y = pred.fit1b, group = group, colour = group), fun.y = mean, geom = "line")
+# -> now different predictions of girls in patient and control group.
+```
+
+```{r}
+# Linear regression model, predict exercise by age, group, and interaction:
+fit1c <- lm(log.exercise ~ age*group, data = dat)
+summary(fit1c)
+AIC(fit1c)
+pred.fit1c <- predict(fit1c)
+ggplot(dat, aes(x = age, y = log.exercise, group = group, colour = group)) + 
+  geom_point() +
+  stat_summary(aes(y = pred.fit1c, group = group, colour = group), fun.y = mean, geom = "line")
+# -> Conclusions from these models
+# (1) the association that exercise increases over time is only found in the patient group! This was not visible when the interaction was not modeled.
+# (2) The model fit (AIC) got better from model to model
+```
+
+Mixed models:
+
+```{r}
+library(nlme)
+fit2a <- lme(log.exercise ~ age, random = ~ age | subject, data = dat)
+summary(fit2a)
+pred.fit2a <- predict(fit2a)
+ggplot(dat, aes(x = age, y = log.exercise, group = group, colour = group)) + 
+  geom_point() +
+  stat_summary(aes(y = pred.fit2a), fun.y = mean, geom = "line")
+# Similar estimate for the fixed effect of time (i.e. age) as in linear regresion, but much better prediction of the single values (by the random effects), this is also visible in the group differences.
+# Model fit is also much better compared to model 1c.
+# This would show in particular in the prediction of the values of each girl.
+```
+
+```{r}
+fit2b <- lme(log.exercise ~ age, random = ~ age | subject, correlation = corCompSymm( form = ~ 1 | subject), data = dat)
+summary(fit2b)
+pred.fit2b <- predict(fit2b)
+ggplot(dat, aes(x = age, y = log.exercise, group = group, colour = group)) + 
+  geom_point() +
+  stat_summary(aes(y = pred.fit2b), fun.y = mean, geom = "line")
+# practically identical to model 2a, since the estimated correlations between individuals is also here practically 0.
+```
+
+```{r}
+fit2c <- lme(log.exercise ~ age, random = ~ age | subject, correlation = corAR1( form = ~ 1 | subject), data = dat)
+# -> doesn't converge
+fit2d <- lme(log.exercise ~ age, random = ~ age | subject, correlation = corSymm( form = ~ 1 | subject), data = dat)
+# -> doesn't converge
+```
+
+With interaction:
+
+```{r}
+fit3a <- lme(log.exercise ~ age*group, random = ~ age | subject, data = dat)
+summary(fit3a)
+pred.fit3a <- predict(fit3a)
+ggplot(dat, aes(x = age, y = log.exercise, group = group, colour = group)) + 
+  geom_point() +
+  stat_summary(aes(y = pred.fit3a), fun.y = mean, geom = "line")
+```
+
+```{r}
+fit3b <- lme(log.exercise ~ age*group, random = ~ age | subject, correlation = corCompSymm( form = ~ 1 | subject), data = dat)
+summary(fit3b)
+pred.fit3b <- predict(fit3b)
+ggplot(dat, aes(x = age, y = log.exercise, group = group, colour = group)) + 
+  geom_point() +
+  stat_summary(aes(y = pred.fit3b), fun.y = mean, geom = "line")
+```
+
+```{r}
+fit3c <- lme(log.exercise ~ age*group, random = ~ age | subject, correlation = corAR1( form = ~ 1 | subject), data = dat)
+summary(fit3c)
+pred.fit3c <- predict(fit3c)
+ggplot(dat, aes(x = age, y = log.exercise, group = group, colour = group)) + 
+  geom_point() +
+  stat_summary(aes(y = pred.fit3c), fun.y = mean, geom = "line")
+# -> best model fit (comparing the AICs of all models) and shows more clearly the differences between the groups in the predicted values (see lines).
+```
+
+```{r}
+fit3d <- lme(log.exercise ~ age*group, random = ~ age | subject, correlation = corSymm( form = ~ 1 | subject), data = dat)
+# -> doesn't converge
+```

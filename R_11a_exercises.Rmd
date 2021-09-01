@@ -1,0 +1,179 @@
+---
+title: "Solutions to exercises: Analysis of variance"
+author: "Stefan Konigorski"
+date: "January 13, 2020"
+output:
+  html_document: default
+---
+
+## Preparations
+
+Load KiGGS data:
+
+```{r}
+#dat_link <- url("https://www.dropbox.com/s/nbh0f6upejh7nr8/data.RData?dl=1")
+#load(dat_link)
+#load("C:/Users/stefan.konigorski/Desktop/data_Teaching/KiGGS/KiGGS03_06.RData")
+dat <- KiGGS03_06
+
+dat$sex <- factor(dat$sex, labels = c("boys", "girls"))
+dat$age2 <- factor(dat$age2, labels = c("0-1y", "2-3y", "4-5y", "6-7y", "8-9y", "10-11y", "12-13y", "14-15y", "16-17y"))
+```
+
+## Exercise 1
+
+Compute a 1-way ANOVA to investigate if systolic blood pressure (sys12) differs between the age groups of the children (age2).
+
+```{r}
+# Preparation
+str(dat$age2)
+str(dat$sys12)
+# -> sys12 is a factor, transform to numeric
+dat$sys12 <- as.numeric(as.character(dat$sys12))
+# Look at distribution:
+hist(dat$sys12)
+# -> close to normal distribution
+```
+
+```{r}
+# Descriptive statistics:
+tapply(dat$sys12, dat$age2, mean, na.rm = TRUE)
+# -> Group of 0-1 year olds cannot be computed
+# -> Check: 
+dat$sys12[dat$age2 == "0-1y"]
+# Are really all NA?
+table(is.na(dat$sys12[dat$age2 == "0-1y"]))
+# -> yes
+```
+
+```{r}
+# ANOVA: Y has to be numeric (i.e. cannot be a factor, which is why we did the preparation above)
+fit1 <- aov(sys12 ~ age2, data = dat)
+fit1
+summary(fit1)
+
+# Alternatively, you can compute it with the anova function (which yields identical results of the ANOVA):
+fit1_alt <- lm(sys12 ~ age2, data = dat)
+summary(fit1_alt)
+anova(fit1_alt)
+
+# Remember: summary(aov()) or anova(lm()) without summary
+
+# Predicted means of sys12 in each factor level of age2. For this, the model (fit1) has to be supplied to the predict function as well as the values, which the predictor variable (age2) should have (i.e. the categories):
+predict(fit1, data.frame(age2 = levels(dat$age2)[-1]))
+# -> these are here equivalent to the descriptive statistics i.e. the empirical means - but this is not the case in general, see next example.
+```
+
+Compute a 2-way ANOVA to investigate if systolic blood pressure (sys12) differs between the age groups of the children (age2) and between boys and girls (sex).
+
+```{r}
+# Descriptive statistics:
+tapply(dat$sys12, dat$age2, mean, na.rm = TRUE)
+tapply(dat$sys12, dat$sex, mean, na.rm = TRUE)
+tapply(dat$sys12, list(dat$age2, dat$sex), mean, na.rm = TRUE)
+```
+
+```{r}
+# ANOVA:
+fit2 <- aov(sys12 ~ age2 + sex, data = dat)
+summary(fit2)
+
+# With anova function:
+fit2.alt <- lm(sys12 ~ age2 + sex, data = dat)
+summary(fit2.alt)
+anova(fit2.alt)
+
+# Predicted means of sys12 in each factor level of age2:
+# Boys: 
+predict(fit2, data.frame(age2 = levels(dat$age2)[-1], sex = levels(dat$sex)[1])) # levels(dat$sex)[1] is "boys"
+# Girls: 
+predict(fit2, data.frame(age2 = levels(dat$age2)[-1], sex = levels(dat$sex)[2])) # levels(dat$sex)[2] ist "girls"
+# -> these are not equivalent to the descriptive statistics from tapply, since we didn't consider interactions
+tapply(dat$sys12, list(dat$age2, dat$sex), mean, na.rm = TRUE)
+```
+
+## Exercise 2
+
+Compute an ANOVA to investigate if systolic blood pressure (sys12) differs between the age groups of the children (age2), between boys and girls (sex), and between the levels of their interaction term. Visualize the interaction in a profile plot.
+
+```{r}
+# Descriptive statistics:
+tapply(dat$sys12, list(dat$age2, dat$sex), mean, na.rm = TRUE)
+```
+
+```{r}
+# ANOVA:
+fit3 <- aov(sys12 ~ age2 + sex + age2:sex, data = dat)
+summary(fit3)
+
+# Alternatively:
+fit3.alt <- aov(sys12 ~ age2*sex, data = dat)
+summary(fit3.alt)
+```
+
+```{r}
+# Visualization in profile plots
+#install.packages("interactions")
+library(interactions)
+
+# Preparation: the function cat_plot for creating profile plots needs the results from aov() as input, computed with a dataset without missing values. i.e. first create a dataset without missing values:
+data_for_analysis <- data.frame(sys12 = dat$sys12, age2 = dat$age2, sex = dat$sex)
+data_for_analysis <- data_for_analysis[complete.cases(data_for_analysis),]
+data_for_analysis <- droplevels(data_for_analysis)
+
+# Now recompute ANOVA and use the cat_plot function. Here are 3 different visualizations:
+fit3.neu <- aov(sys12 ~ age2 + sex + age2:sex, data = data_for_analysis)
+cat_plot(fit3.neu, pred = age2, modx = sex)
+cat_plot(fit3.neu, pred = age2, modx = sex, plot.points = TRUE)
+(plot1 <- cat_plot(fit3.neu, pred = age2, modx = sex, geom = "line") )  
+# -> the last line saves the plot in the object plot1 (so that we can do stuff with this later) and also gives the results of the right-hand side.
+
+# Compare to model without interaction:
+cat_plot(aov(sys12 ~ age2 + sex, data = data_for_analysis), pred = age2, modx = sex, geom = "line")
+
+# Predicted means of sys12 in each factor level of age2:
+# Boys: 
+predict(fit3, data.frame(age2 = levels(data_for_analysis$age2), sex = levels(data_for_analysis$sex)[1])) # levels(data_for_analysis$sex)[1] is "boys"
+# Girls: 
+predict(fit3, data.frame(age2 = levels(data_for_analysis$age2), sex = levels(data_for_analysis$sex)[2])) # levels(data_for_analysis$sex)[2] is "girls"
+# -> they are equal to the descriptive statistics above from tapply!
+```
+
+## Exercise 3
+
+Compute an ANOVA to investigate if systolic blood pressure (sys12) differs between the age groups of the children (age2), between boys and girls (sex), and between the levels of their interaction term, adjusting for BMI. Look at the predicted adjusted systolic blood pressure means. Interpret the results.
+
+```{r}
+# Preparation
+data_for_analysis2 <- data.frame(sys12 = dat$sys12, age2 = dat$age2, sex = dat$sex, bmiB = dat$bmiB)
+data_for_analysis2 <- data_for_analysis2[complete.cases(data_for_analysis2),]
+data_for_analysis2 <- droplevels(data_for_analysis2)
+```
+
+```{r}
+# ANOVA:
+fit4 <- aov(sys12 ~ age2 + sex + age2:sex + bmiB, data = data_for_analysis2)
+summary(fit4)
+
+# generally you might want to remove the effect of the covariate first, and then test the association with the factors. For this you have to include BMI as first variable:
+fit4b <- aov(sys12 ~ bmiB + age2 + sex + age2:sex, data = data_for_analysis2)
+summary(fit4b)
+```
+
+```{r}
+# Visualization
+plot2 <- cat_plot(fit4, pred = age2, modx = sex, geom = "line")
+plot1
+plot2
+```
+
+```{r}
+# Extraction of the predicted means (here: identical to the descriptive statistics above)
+helpdat <- data.frame(age2 = rep(levels(data_for_analysis2$age2), each = 2), 
+                      sex = rep(levels(data_for_analysis2$sex), 2), 
+                      bmiB = mean(data_for_analysis2$bmiB))
+helpdat
+data.frame( helpdat, pred_ohne_BMI =  predict(fit3.neu, helpdat), pred_mit_BMI = predict(fit4, helpdat))
+# for comparison:
+tapply(dat$sys12, list(dat$age2, dat$sex), mean, na.rm = TRUE)
+```

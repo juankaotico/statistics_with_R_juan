@@ -1,0 +1,143 @@
+---
+title: "Homework 9"
+author: "Juan Carlos Niño"
+date: "December 28, 2019"
+output:
+  html_document: default
+---
+
+Download this R Markdown file, save it on your computer, and perform all the below tasks by inserting your answer in text or by inserting R chunks below. After you are done, upload this file with your solutions on Moodle.
+
+## Exercise 1: Assumptions of linear regression
+
+Load the KiGGS dataset and compute the regression predicting BMI by the amount and frequency of eating pancakes:
+
+```{r}
+# load data
+dat_link <- url("https://www.dropbox.com/s/nbh0f6upejh7nr8/data.RData?dl=1")
+load(dat_link)
+dat <- KiGGS03_06
+
+# variables and formatting
+bmi <- dat$bmiB
+pancake_amount <- dat$fq41a
+pancake_amount <- factor(pancake_amount, labels = c("never", "1/4 piece or less", "1/2 piece", "1 piece", "2 pieces", "3 pieces or more"))
+pancake_freq <- dat$fq41
+pancake_freq <- droplevels(pancake_freq)
+pancake_freq <- factor(pancake_freq, labels = c("never", "1x/month", "2-3x/month", "1-2x/week", "3-4x/week", "5-6x/week", "1x/day", "2-3x/day", "4-5x/day"))
+
+# Regression:
+fit1 <- lm(bmi ~ as.numeric(pancake_amount) + as.numeric(pancake_freq))
+```
+
+In this model, investigate and judge whether the assumptions listed on slide 17 are satisfied.
+
+#Conditions:
+#Y is continuous
+## In this case BMI is the dependent variable and it is a continuous variable
+__________________________________________________________________
+
+#The relationsships between Y and all Xj are linear
+##For this the plot is necesary
+plot (as.numeric(pancake_amount), bmi)
+plot (as.numeric(pancake_freq), bmi)
+##As seen in the plots, variables are not linear (we don't see a diagonal line through the plot, rather several vertical lines
+______________________________________________________________
+
+#All relevant variables (covariates, confounders) are in the model
+##Here we attach all the different models
+fit1a <- lm(bmi ~ as.numeric(pancake_amount))
+summary(fit1a)$coefficients
+
+fit1b <- lm(bmi ~ as.numeric(pancake_freq))
+summary(fit1b)$coefficients
+
+fit2a <- lm(bmi ~ as.numeric(pancake_amount) + as.numeric(pancake_freq))
+summary(fit2a)$coefficients
+
+fit2b <- lm(bmi ~ pancake_amount + pancake_freq)
+# warning: this  model is collinear, hence you cannot trust the model and the single estimates and tests in the model, see R_9b_exercise_2_assumpt.Rmd
+summary(fit2b)$coefficients
+
+bmi_log <- log(bmi)
+fit2c <- lm(bmi_log ~ as.numeric(pancake_amount) + as.numeric(pancake_freq))
+summary(fit2c)$coefficients
+
+##having in all P values significative for all the models, excpet the not transformed one, meaning that we have all the variables necessary included.
+________________________________________________________________________
+
+#All observations are independent
+##We know from the background of the data, that all the values are independent observations, that is the way the questionnarie was made.
+______________________________________________________________________
+
+#There is no multicollinearity (≈ not a ”super strong” correlation between the Xj)
+## we will use the package CAR to be able to use the VIF and analyze the multicollinearity
+#install.packages("car")
+library(car)
+## and we use the model with more than 2 variables 
+
+
+
+
+car::vif(fit1)
+
+
+
+## If the VIF is high means that the information given by the variable is given by other variable inside the model. With a no relation at all being 1, accepted values are under 4 (ideal are under 2). The result here are "1.671192" for each one, which is good.
+______________________________________________________________________
+
+#Homoscedasticity (equal variance) of the residuals
+
+plot(fit1)
+
+##in the residuals vs fitted values we can see the the values are highly cluster to the end of the X axis and the red line tend to go down at the en but staying pretty much flat
+##using the NCVTest (Non-Constance-variance) allow us to identified, from the stadistrical point
+
+car::ncvTest(fit1)
+
+##This test shows the variances here the p-value is small enough, so we can assume that the data has an equal variance
+
+_______________________________________________________________________
+
+#Normal distribution of the residuals
+
+##from the qqplot we can see the guide line and the values, that should be pretty much on the line, we can see that specially at the end the values go up.
+
+hist(fit1$resid)
+
+##using the histogram of the residuals we can see that the values don't have an exact bell shape having the positive side extremly elongated.
+##Visually both test fail for normal distribution.
+
+______________________________________________________________________
+
+
+## Exercise 2: Model selection in linear regression
+
+In the KiGGS dataset, aim to select relevant predictors for sys12 (systolic blood pressure). Use 2 of the model selection approaches described on slide 31, apply them to the KiGGS dataset and compare the results.
+
+#Theorical approach
+##With this one. With the expert knowledge you chose all the possible predictors of the systolic blood presure. This includes: Age (age2), Sex (sex), BMI of the mother (Mbmi_k), Diabetes in pregnancy (e0151), High pressure in pregnancy (e0155), nummber of weeks at born (e016z), Weight at born(e017a_k), waist size (tail), total cholesterol (CHOLX), LDL Cholesterol (LDLX), Triglycerids (GLYCX).
+##now we select the possible values, we need to role out the non-continuous ones.
+##We ended up with: Age (age2), Sex (sex), BMI of the mother (Mbmi_k), nummber of weeks at born (e016z), Weight at born(e017a_k), waist size (tail), total cholesterol (CHOLX), LDL Cholesterol (LDLX), Triglycerids (GLYCX).
+
+#reassing variables
+sbp12 <- dat$sys12
+age <- dat$age2
+sex <- dat$sex
+bmi_m <- dat$Mbmi_k
+nnofweeks <- dat$e016z
+waborn <- dat$e017a_k
+waist <- dat$tail
+tchol <- dat$CHOLX
+ldl <- dat$LDLx
+tgc <- dat$GLYCX
+
+
+
+
+superlm <- lm(sbp12 ~ age + sex + bmi_m + nnofweeks + waborn + waist + tchol +ldl + tgc)
+
+
+## Exercise 3: Linear regression with multiple imputation (optional)
+
+Run the code in the Rmd file R_9d_linear_regression_MI.Rmd, inspect the R code what it is doing, and look at the results. Apply the same to another linear regression model of your choice.

@@ -1,0 +1,78 @@
+---
+title: "Solutions to exercise 1: Multiple linear regression"
+author: "Stefan Konigorski"
+date: "December 16, 2019"
+output:
+  html_document: default
+---
+
+## Load KiGGS data
+
+```{r}
+#dat_link <- url("https://www.dropbox.com/s/nbh0f6upejh7nr8/data.RData?dl=1")
+#load(dat_link)
+load("C:/Users/stefan.konigorski/Desktop/data_Teaching/KiGGS/KiGGS03_06.RData")
+dat <- KiGGS03_06
+```
+
+## Multiple linear regression
+
+Use linear regression to investigate the question if the amount and frequency of eating pancakes is associated with the BMI of children.
+
+```{r}
+# variables
+bmi <- dat$bmiB
+pancake_amount <- dat$fq41a
+pancake_freq <- dat$fq41
+
+# check format
+str(bmi)
+str(pancake_amount)
+str(pancake_freq)
+table(pancake_amount)
+table(pancake_freq)
+
+# format
+pancake_amount <- factor(pancake_amount, labels = c("never", "1/4 piece or less", "1/2 piece", "1 piece", "2 pieces", "3 pieces or more"))
+pancake_freq <- droplevels(pancake_freq)
+pancake_freq <- factor(pancake_freq, labels = c("never", "1x/month", "2-3x/month", "1-2x/week", "3-4x/week", "5-6x/week", "1x/day", "2-3x/day", "4-5x/day"))
+
+# check again
+table(pancake_amount)
+table(pancake_freq)
+```
+
+Possible models with pancake variables:
+
+```{r}
+fit1a <- lm(bmi ~ as.numeric(pancake_amount))
+summary(fit1a)$coefficients
+```
+
+```{r}
+fit1b <- lm(bmi ~ as.numeric(pancake_freq))
+summary(fit1b)$coefficients
+```
+
+```{r}
+fit2a <- lm(bmi ~ as.numeric(pancake_amount) + as.numeric(pancake_freq))
+summary(fit2a)$coefficients
+```
+
+```{r}
+fit2b <- lm(bmi ~ pancake_amount + pancake_freq)
+# warning: this  model is collinear, hence you cannot trust the model and the single estimates and tests in the model, see R_9b_exercise_2_assumpt.Rmd
+summary(fit2b)$coefficients
+```
+
+```{r}
+bmi_log <- log(bmi)
+fit2c <- lm(bmi_log ~ as.numeric(pancake_amount) + as.numeric(pancake_freq))
+summary(fit2c)$coefficients
+```
+
+Adjust the analysis for age, sex, and further covariates, and interpret the new results.
+
+```{r}
+summary(lm(bmi ~ as.numeric(pancake_amount) + as.numeric(pancake_freq) + as.numeric(dat$age2) + dat$sex))
+```

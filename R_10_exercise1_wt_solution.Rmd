@@ -1,0 +1,44 @@
+---
+title: "Exercise 1: Logistic regression"
+author: "Stefan Konigorski"
+date: "January 6, 2020"
+output:
+  html_document: default
+---
+
+## Load KiGGS data
+
+```{r}
+#dat_link <- url("https://www.dropbox.com/s/nbh0f6upejh7nr8/data.RData?dl=1")
+#load(dat_link)
+load("C:/Users/stefan.konigorski/Desktop/data_Teaching/KiGGS/KiGGS03_06.RData")
+dat <- KiGGS03_06
+```
+
+## Logistic regression
+
+a. Investigate if the amount and frequency of eating pancakes (fq41 and fq41a) are associated with shortsightedness (e0251), using logistic regression. (Question: What is predicted: incidence or prevalence of shortsightedness?). Interpret the results.
+
+b. Add further predictors and interpret the results. Also look at the predicted probabilities by the model and the classification table of true vs. predicted shortsightedness.
+
+```{r}
+# Preparation for logistic regression - check variables (eg if they are factor variables, and if yes, how many categories they have), especially e0251
+str(dat$e0251)
+str(dat$fq41)
+str(dat$fq41a)
+table(dat$e0251)
+table(dat$fq41)
+table(dat$fq41a)
+
+# format variables
+dat$fq41a <- factor(dat$fq41a, labels = c("never", "1/4 piece or less", "1/2 piece", "1 piece", "2 pieces", "3 pieces or more"))
+dat$fq41a <- droplevels(dat$fq41a)
+dat$fq41 <- factor(dat$fq41, labels = c("never", "1x/month", "2-3x/month", "1-2x/week", "3-4x/week", "5-6x/week", "1x/day", "2-3x/day", "4-5x/day"))
+dat$e0251 <- factor(dat$e0251, labels = c("yes", "no", "don't know"))
+
+# Compute a logistic regression with these variables and interpret the results.
+
+# Logistic regression in R needs Y with values 0, 1 or a factor with two levels, and predicts the probability of "1", or the probability of the factor with higher level.
+# Transform the outcome variable for a better interpretation of the results. Remove the values "don't know" and the factor level to create a binary variable. Then reorder the levels.
+# Compute a logistic regression with this transformed outcome variable.
+```

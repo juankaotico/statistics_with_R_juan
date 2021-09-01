@@ -1,0 +1,135 @@
+---
+title: "Homework 10"
+author: "Juan Carlos Niño"
+date: "January 12, 2020"
+output:
+  html_document: default
+---
+
+Download this R Markdown file, save it on your computer, and perform all the below tasks by inserting your answer in text or by inserting R chunks below. After you are done, upload this file with your solutions on Moodle.
+
+For all exercises, use the KiGGS dataset.
+
+## Exercise 1: Logistic regression
+
+Choose 1 suitable outcome variable of interest and 3 predictors, and compute a logistic regression model. Interpret the results: which predictor is associated with the outcome and what is the strength of association (odds ratio)? Also, is the model a good fit i.e. can the outcome be predicted well (look at the misclassification table for this)?
+
+#will use the same exercise of the class
+```{r}
+# Preparation for logistic regression - check variables (eg if they are factor variables, and if yes, how many categories they have), especially important for e0251
+str(dat$e0251)
+str(dat$fq41)
+str(dat$fq41a)
+table(dat$e0251)
+table(dat$fq41)
+table(dat$fq41a)
+# -> dat$e0251 is factor with 3 categories
+
+# format variables
+dat$fq41a <- factor(dat$fq41a, labels = c("never", "1/4 piece or less", "1/2 piece", "1 piece", "2 pieces", "3 pieces or more"))
+dat$fq41a <- droplevels(dat$fq41a)
+dat$fq41 <- factor(dat$fq41, labels = c("never", "1x/month", "2-3x/month", "1-2x/week", "3-4x/week", "5-6x/week", "1x/day", "2-3x/day", "4-5x/day"))
+dat$e0251 <- factor(dat$e0251, labels = c("yes", "no", "don't know"))
+
+# Compute a logistic regression with these variables and interpret the results.
+model1 <- glm(e0251 ~ as.numeric(fq41) + as.numeric(fq41a), family = binomial(link = "logit"), data = dat)
+summary(model1)
+```
+
+## Exercise 2: Poisson regression
+
+Predict the amount of measles vaccinations (Maanzahl) by the number of siblings (e006B1), the sex and age of the children (sex, age2), place of residence (STALA, OW) and the monthly household income (e093), using a Poisson regression model. Interpret the results. Which variables are associated with the outcome? Is the model a good fit to the data?
+
+```{r}
+str(dat$Maanzahl)
+str(dat$e006B1)
+str(dat$sex)
+str(dat$age2)
+str(dat$STALA)
+str(dat$OW)
+str(dat$e093)
+
+
+dat$Maanzahl <- as.numeric(as.character(dat$Maanzahl))
+dat$e006B1<- factor(dat$e006B1, labels = c("no sibling", "1 sibling", "2 or more siblings"))
+dat$sex   <- factor(dat$sex, labels = c("boys", "girls"))
+dat$age2  <- factor(dat$age2, labels = c("0-1y", "2-3y", "4-5y", "6-7y", "8-9y", "10-11y", "12-13y", "14-15y", "16-17y"))
+dat$OW    <- factor(dat$OW, labels = c("east", "west"))
+dat$STALA <- factor(dat$STALA, labels = c("rural", "small_city", "medium_city", "urban"))
+
+
+# Look at variables
+table(dat$Maanzahl)
+table(dat$e006B1)
+table(dat$sex)
+table(dat$age2)
+table(dat$STALA)
+table(dat$OW)
+table(dat$e093)
+
+# look at distribution of outcome
+hist(dat$Maanzahl)
+mean(dat$Maanzahl, na.rm = TRUE)
+var(dat$Maanzahl, na.rm = TRUE)
+
+# Poisson Regression: first predict dat$E085z01 only by sex:
+fit2 <- glm(dat$Maanzahl ~ sex, family = poisson(link = "log"), data = dat)
+
+# results:
+summary(fit2)
+
+# for interpretation: e^ to have interpretation on the scale of frequencies (and not of log-frequencies):
+exp(coef(fit2))
+
+# Direcly using the summ function:
+library(jtools)
+jtools::summ(fit2, exp = T, confint = T, model.fit = F, digits = 3)
+
+# Predicted frequencies by the model:
+pred_2 <- predict(fit2, type="response")
+
+# Compare these with the observed frequencies:
+predictions_2 <- data.frame(obs = dat$Maanzahl[1:17640 %in% names(pred_2)], pred_2 = pred_2)
+cor(predictions_2$obs, predictions_2$pred_2)
+plot(predictions_2$obs, predictions_2$pred_2)
+
+# fit model with all variables:
+fit3 <- glm(dat$Maanzahl ~ e006B1 + sex + age2 + STALA + OW + e093, family = poisson(link = "log"), data = dat)
+
+# results:
+summary(fit3)
+exp(coef(fit3))
+library(jtools)
+jtools::summ(fit3, exp = T, confint = T, model.fit = F, digits = 3)
+
+# Predictions:
+predictions_3 <- data.frame(emp = dat$Maanzahl[1:17640 %in% names(predict(fit3, type="response"))], exp = predict(fit3, type="response"))
+cor(predictions_3$emp, predictions_3$exp)
+plot(predictions_3$emp, predictions_3$exp)
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Exercise 3: Negative Binomial regression (optional)
+
+Predict the amount of measles vaccinations (Maanzahl) by the number of siblings (e006B1), the sex and age of the children (sex, age2), place of residence (STALA, OW) and the monthly household income (e093), using a Negative Binomial regression model. Interpret the results. Which variables are associated with the outcome? Is the model a good fit to the data?

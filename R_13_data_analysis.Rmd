@@ -1,0 +1,42 @@
+---
+title: "Data analysis"
+author: "Stefan Konigorski"
+date: "January 27, 2020"
+output:
+  html_document: default
+---
+
+## Load KiGGS data
+
+```{r}
+#dat_link <- url("https://www.dropbox.com/s/nbh0f6upejh7nr8/data.RData?dl=1")
+#load(dat_link)
+load("C:/Users/stefan.konigorski/Desktop/data_Teaching/KiGGS/KiGGS03_06.RData")
+dat <- KiGGS03_06
+```
+
+## Analysis
+
+Let's look at the variable e025a, which describes whether the child has reading help.
+
+```{r}
+# format
+dat$e025a <- factor(dat$e025a, labels = c("yes", "no"))
+
+# first look at the variable
+table(dat$e025a)
+```
+
+Get together in groups, and investigate variables that are associated with needing a reading help. 
+
+Choose 3-5 variables that you think are relevant.
+
+Think of a suitable statistical model how to investigate this (you could also include the age when the child got their reading help into the analysis: e025z1)?
+
+Format the variables.
+
+Do the analysis.
+
+Check the assumptions of the analysis.
+
+Interpret the results.

@@ -1,0 +1,84 @@
+---
+title: "Homework 6 - Solutions"
+author: "Stefan Konigorski"
+date: "November 25, 2019"
+output:
+  html_document: default
+---
+
+Download this R Markdown file, save it on your computer, and perform all the below tasks by inserting your answer in text or by inserting R chunks below. After you are done, upload this file with your solutions on Moodle.
+
+## Load KiGGS data
+
+```{r}
+#dat_link <- url("https://www.dropbox.com/s/nbh0f6upejh7nr8/data.RData?dl=1")
+#load(dat_link)
+load("C:/Users/stefan.konigorski/Desktop/data_Teaching/KiGGS/KiGGS03_06.RData")
+dat <- KiGGS03_06
+```
+
+## Exercise 1: Statistical tests
+
+**Task:** 
+a) In the KiGGS dataset, perform a 2-sample t-test for paired samples (i.e. dependent samples) for the two variables 'sys1' and 'sys2'. Interpret the results.
+
+**Solution:** 
+```{r}
+# format variables
+sbp1 <- as.numeric(as.character(dat$sys1))
+sbp2 <- as.numeric(as.character(dat$sys2))
+
+# perform test
+t.test(sbp1, sbp2, paired = TRUE)
+
+# Interpretation:
+# Reject the null hypothesis that there is no difference in the expected value of sys1 and sys2 i.e. conclude that they are different.
+```
+
+**Task:** 
+b) In the KiGGS dataset, select one metric and one binary variable (or create one) and perform a 2-sample t-test. Then do a Mann-Whitney U-test with the same variables, explore the function to do this, and compare the results to the t-test.
+
+**Solution:** 
+```{r}
+# perform the Mann-Whitney U-test test, which is a special case of the Wilcoxon test
+wilcox.test(sbp1, sbp2, paired = TRUE, alternative = "two.sided")
+# -> same conclusion as in above test that sbp1 and sbp2 are different
+```
+
+## Exercise 2: Study planning (optional)
+
+**Task:** 
+Compute the sample size using R or G*Power, for a study that investigates the question if biking to the HPI helps you to better concentrate in class or not.
+
+Think about how you can formulate this study question in terms of variables, and which statistical test (that we have covered in class 6) would be appropriate for this.
+
+a) Which test could you use?
+
+**Solution:** 
+
+Let's assess if people bike to HPI (yes/no) and assess their concentration by a small quiz which is graded 0-100 (metric variable). Let's just measure this on one day, i.e. every person only appears once in the data. Then we can do a 2-sample test for independent samples.
+
+**Task:** 
+
+b) Which sample size is necessary, to find a true effect with 80\% power at $\alpha=0.05$ using this statistical test?
+
+**Solution:**
+
+We can use the pwr.t.test function. Let's test which sample size we need to achieve different levels of power. For that, we need to specify the effect size d. This is here Cohen's d - the difference between the means divided by the pooled standard deviation. 
+
+In order to choose these here, let's look at the KiGGS dataset and the score of kids' wellbeing to get some idea how many the values vary. This is also a scale 0-100.
+
+```{r}
+sd(as.numeric(as.character(dat$pw100.k)), na.rm = TRUE)
+```
+
+Ok, let's take an SD of 10, let's assume this is the same in both groups. And let's assume that biking doesn't make a big difference, only on average 3 units.
+
+```{r}
+d <- 3/10
+library(pwr)
+pwr.t.test(d = d, sig.level = 0.05, power = 0.8, type = "paired")$n
+pwr.t.test(d = d, sig.level = 0.05, power = 0.85, type = "paired")$n
+pwr.t.test(d = d, sig.level = 0.05, power = 0.9, type = "paired")$n
+pwr.t.test(d = d, sig.level = 0.05, power = 0.95, type = "paired")$n
+```

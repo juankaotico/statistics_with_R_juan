@@ -1,0 +1,133 @@
+---
+title: "Homework 10 - solutions"
+author: "Stefan Konigorski"
+date: "January 6, 2020"
+output:
+  html_document: default
+---
+
+## Load KiGGS data
+
+```{r}
+dat_link <- url("https://www.dropbox.com/s/nbh0f6upejh7nr8/data.RData?dl=1")
+load(dat_link)
+#load("C:/Users/stefan.konigorski/Desktop/data_Teaching/KiGGS/KiGGS03_06.RData")
+dat <- KiGGS03_06
+```
+
+## Exercise 1: Logistic regression
+
+**Task:** 
+
+Choose 1 suitable outcome variable of interest and 3 predictors, and compute a logistic regression model. Interpret the results: which predictor is associated with the outcome and what is the strength of association (odds ratio)? Also, is the model a good fit i.e. can the outcome be predicted well (look at the misclassification table for this)?
+
+**Solution:** 
+
+Take as outcome whether the children were vaccinated against measles or not i.e. transform the variable Maanzahl, then compute logistic regression model.
+
+```{r}
+# preparations:
+table(dat$Maanzahl)
+dat$measles <- dat$Maanzahl > 0
+
+dat$sex   <- factor(dat$sex, labels = c("boys", "girls"))
+dat$age2  <- factor(dat$age2, labels = c("0-1y", "2-3y", "4-5y", "6-7y", "8-9y", "10-11y", "12-13y", "14-15y", "16-17y"))
+dat$OW    <- factor(dat$OW, labels = c("east", "west"))
+```
+
+```{r}
+# logistic regression:
+fit1 <- glm(measles ~ sex + OW + as.numeric(age2), family = binomial(link = "logit"), data = dat)
+summary(fit1)
+library(jtools)
+jtools::summ(fit1, exp = T, confint = T, model.fit = F, digits = 3)
+```
+
+Interpretatation: age and east-west residence are associated with measles vaccinations. Their respective odds ratios are 0.687 and 1.665. I.e. for every 2-year that children are older (=increase in age2 by one unit), their odds of being vaccinated against measles increases by 66.5% (i.e. their odds are 1.665 the odds of being 2 years younger). Similarly, the odds that children in west Germany are vaccinated against measles are 31.3% (=1-0.687) smaller compared to the odds of children in east Germany are vaccinated.
+
+```{r}
+# model fit:
+pred1 <- predict(fit1, type = "response")
+summary(pred1)
+# -> 87.7% are vaccinated.
+
+measles.p.pred1 <- rep(NA, length(dat$measles))
+measles.p.pred1[as.numeric(names(pred1))] <- pred1
+measles.pred1 <- measles.p.pred1 > mean(measles.p.pred1, na.rm = TRUE)
+
+table(measles.pred1, dat$measles)
+```
+
+Conclusion: this is not a totally bad model - but still not great either. Of the 16459 incorporated in the analysis, 10741 are classified correctly. However, still 5238 are falsely classified by the model as not being vaccinated.
+
+## Exercise 2: Poisson regression
+
+**Task:** 
+Predict the amount of measles vaccinations (Maanzahl) by the number of siblings (e006B1), the sex and age of the children (sex, age2), place of residence (STALA, OW) and the monthly household income (e093), using a Poisson regression model. Interpret the results. Which variables are associated with the outcome? Is the model a good fit to the data?
+
+**Solution:** 
+
+```{r}
+str(dat$Maanzahl)
+# -> is numeric
+
+# Format variables
+dat$e006B1<- factor(dat$e006B1, labels = c("no sibling", "1 sibling", "2 or more siblings"))
+dat$sex   <- factor(dat$sex, labels = c("boys", "girls"))
+dat$age2  <- factor(dat$age2, labels = c("0-1y", "2-3y", "4-5y", "6-7y", "8-9y", "10-11y", "12-13y", "14-15y", "16-17y"))
+dat$OW    <- factor(dat$OW, labels = c("east", "west"))
+dat$STALA <- factor(dat$STALA, labels = c("rural", "small_city", "medium_city", "urban"))
+
+# look at distribution of outcome
+table(dat$Maanzahl)
+hist(dat$Maanzahl)
+mean(dat$Maanzahl, na.rm = TRUE)
+var(dat$Maanzahl, na.rm = TRUE)
+# -> mean slightly larger than variance, but the assumption that they are the same might still be not too badly violated?! (compare results from Poisson and NB regression models below)
+```
+
+```{r}
+# compute Poisson regression
+fit2 <- glm(dat$Maanzahl ~ e006B1 + sex + as.numeric(age2) + STALA + OW + as.numeric(e093), family = poisson(link = "log"), data = dat)
+
+# Look at results
+summary(fit2)
+library(jtools)
+jtools::summ(fit2, exp = T, confint = T, model.fit = F, digits = 3)
+
+# look at predictions
+predictions2 <- data.frame(emp = dat$Maanzahl[1:17640 %in% names(predict(fit2, type="response"))], exp = predict(fit2, type="response"))
+cor(predictions2$emp, predictions2$exp)
+plot(predictions2$emp, predictions2$exp)
+```
+
+Interpretation:
+- associated with the number of measles vaccinations are (based on hypothesis tests of the regression coefficients using a significance level of alpha = 0.05): the number of siblings, age, and east/west residence. Also, there is a statistically significant (with alpha = 0.05) difference between children in medium-sized cities compared to rural areas.
+- the predictions do correlate moderately with the actual number of vaccinations. In my opinion, this is not a perfect but also not a bad model.
+
+## Exercise 3: Negative Binomial regression (optional)
+
+**Task:** 
+
+Predict the amount of measles vaccinations (Maanzahl) by the number of siblings (e006B1), the sex and age of the children (sex, age2), place of residence (STALA, OW) and the monthly household income (e093), using a Negative Binomial regression model. Interpret the results. Which variables are associated with the outcome? Is the model a good fit to the data?
+
+**Solution:** 
+
+```{r}
+
+# compute Negative Binomial regression
+# install.package("MASS")
+library(MASS)
+fit3 <- MASS::glm.nb(dat$Maanzahl ~ e006B1 + sex + as.numeric(age2) + STALA + OW + as.numeric(e093), data = dat)
+
+# Look at results
+summary(fit3)
+exp(coef(fit3))
+
+# look at predictions
+predictions3 <- data.frame(emp = dat$Maanzahl[1:17640 %in% names(predict(fit3, type="response"))], exp = predict(fit3, type="response"))
+cor(predictions3$emp, predictions3$exp)
+plot(predictions3$emp, predictions3$exp)
+```
+
+Virtually identical results as compared to above!

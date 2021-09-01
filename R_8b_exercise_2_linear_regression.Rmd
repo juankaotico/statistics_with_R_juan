@@ -1,0 +1,35 @@
+---
+title: "Exercise 2: Simple linear regression"
+author: "Stefan Konigorski"
+date: "December 9, 2019"
+output:
+  html_document: default
+---
+
+## Load KiGGS data
+
+```{r}
+#dat_link <- url("https://www.dropbox.com/s/nbh0f6upejh7nr8/data.RData?dl=1")
+#load(dat_link)
+load("C:/Users/stefan.konigorski/Desktop/data_Teaching/KiGGS/KiGGS03_06.RData")
+dat <- KiGGS03_06
+```
+
+## Linear regression
+
+a) Compute a linear regression by predicting systolic blood pressure (variable sys12) by BMI (variable bmiB) of children.
+b) Compute a linear regression by predicting systolic blood pressure (variable sys12) by BMI categories (variable bmiKH) of children.
+
+```{r}
+
+sbp <- dat$sys12
+bmi <- dat$bmiB
+bmi_cat <- dat$bmiKH
+bmi_cat <- factor(bmi_cat, labels = c("strongly underweight", "underweight", "normal weight", "overweight", "obese"))  
+
+# Check format
+str(sbp)
+str(bmi)
+str(bmi_cat)
+```
+

@@ -1,0 +1,138 @@
+---
+title: "Exercise 3 with solutions: Regression of categorical and ordinal data"
+author: "Stefan Konigorski"
+date: "January 6, 2020"
+output:
+  html_document: default
+---
+
+## Load KiGGS data
+
+```{r}
+#dat_link <- url("https://www.dropbox.com/s/nbh0f6upejh7nr8/data.RData?dl=1")
+#load(dat_link)
+load("C:/Users/stefan.konigorski/Desktop/data_Teaching/KiGGS/KiGGS03_06.RData")
+dat <- KiGGS03_06
+```
+
+## Logistic, multinomial, ordinal regression
+
+Predict the birth weight of children (e017a.k, in categories) by the BMI of their parents (Mbmi.k, Vbmi.k), their sex (sex), and the birth week (e016z).
+For this, use a multinomial regression and ordinal regression model, and compare the results to pairwise logistic regression models. 
+Are the results similar? 
+What are the advantages/disadvantages of each approach?
+
+```{r}
+# Preparation - check variables (eg if they are factor variables, and if yes, how many categories they have), especially important for e017a.k
+str(dat$e017a.k) # -> factor with 6 categories
+str(dat$Mbmi.k)
+str(dat$Vbmi.k)
+str(dat$sex)
+str(dat$e016z)
+
+# Format variables
+dat$e017a.k <- factor(dat$e017a.k, labels = c("<2500", "2500-2999", "3000-3499", "3500-3999", "4000-4499", ">4500"))
+dat$Mbmi.k  <- factor(dat$Mbmi.k, labels = c("underweight", "normal weight", "overweight", "obese"))
+dat$Vbmi.k  <- factor(dat$Vbmi.k, labels = c("underweight", "normal weight", "overweight", "obese"))
+dat$sex     <- factor(dat$sex, labels = c("boys", "girls"))
+dat$e016z   <- as.numeric(as.character(dat$e016z))
+
+# Look at variables
+table(dat$e017a.k) 
+table(dat$Mbmi.k)
+table(dat$Vbmi.k)
+table(dat$sex)
+table(dat$e016z)
+```
+
+First, compute the models only using e016z as predictor
+
+```{r}
+# Multinomial regression:
+# install.package("nnet")
+library(nnet)
+levels(dat$e017a.k)
+fit_mr1 <- nnet::multinom(e017a.k ~ e016z, data = dat)
+
+# Look at results: 
+summary(fit_mr1) # -> one coefficient (for each predictor) for the respective comparison of the category (eg 2500-2999) with the reference category (here: <2500)
+
+# p-values for hypothesis tests of the regression coefficients (whether they are 0 or not) have to be computed by hand, e.g.:
+W <- summary(fit_mr1)$coefficients/summary(fit_mr1)$standard.errors
+(1 - pnorm(abs(W), 0, 1)) * 2
+
+# Compute odds ratio:
+exp(summary(fit_mr1)$coefficients)
+
+# Predicted probabilities: 
+head(fitted(fit_mr1))
+```
+
+```{r}
+# Ordinal regression:
+# install.package("MASS")
+library(MASS)
+fit_or1 <- MASS::polr(e017a.k ~ e016z, method = "logistic", Hess = TRUE, data = dat)
+
+# Look at results: 
+summary(fit_or1) # -> Look under 'Coefficients': one coefficient (for each predictor) which contains the effect of the birth week on the birth weight category (under the proportional odds assumption)
+
+# p-values:
+pnorm(abs(summary(fit_or1)$coefficients[, 3]), lower.tail = FALSE) * 2
+
+# Compute odds ratio:
+exp(summary(fit_or1)$coefficients[, 1])
+```
+
+```{r}
+# Pairwise logistic regression:
+dat_kat12 <- dat[dat$e017a.k %in% c("<2500", "2500-2999"), ]
+dat_kat13 <- dat[dat$e017a.k %in% c("<2500", "3000-3499"), ]
+dat_kat14 <- dat[dat$e017a.k %in% c("<2500", "3500-3999"), ]
+dat_kat15 <- dat[dat$e017a.k %in% c("<2500", "4000-4499"), ]
+dat_kat16 <- dat[dat$e017a.k %in% c("<2500", ">4500"), ]
+fit_lr12 <- glm(e017a.k ~ e016z, family = binomial(link = "logit"), data = dat_kat12)
+fit_lr13 <- glm(e017a.k ~ e016z, family = binomial(link = "logit"), data = dat_kat13)
+fit_lr14 <- glm(e017a.k ~ e016z, family = binomial(link = "logit"), data = dat_kat14)
+fit_lr15 <- glm(e017a.k ~ e016z, family = binomial(link = "logit"), data = dat_kat15)
+fit_lr16 <- glm(e017a.k ~ e016z, family = binomial(link = "logit"), data = dat_kat16)
+
+# look at results:
+summary(fit_lr12)$coefficients
+summary(fit_lr13)$coefficients
+summary(fit_lr14)$coefficients
+summary(fit_lr15)$coefficients
+summary(fit_lr16)$coefficients
+
+# odds ratio with 95% CI:
+library(jtools)
+jtools::summ(fit_lr12, exp = T, confint = T, model.fit = F, digits = 3)
+```
+
+Now incorporate more predictors:
+
+```{r}
+# Multinomial regression:
+fit_mr2 <- nnet::multinom(e017a.k ~ Mbmi.k + Vbmi.k + sex + as.numeric(e016z), data = dat)
+summary(fit_mr2)
+```
+
+```{r}
+# Ordinal regression:
+fit_or2 <- MASS::polr(e017a.k ~ Mbmi.k + Vbmi.k + sex + as.numeric(e016z), method = "logistic", Hess = TRUE, data = dat)
+summary(fit_or2) 
+```
+
+```{r}
+# Pairwise logistic regression:
+fit_lr12 <- glm(e017a.k ~ Mbmi.k + Vbmi.k + sex + as.numeric(e016z), family = binomial(link = "logit"), data = dat_kat12)
+fit_lr13 <- glm(e017a.k ~ Mbmi.k + Vbmi.k + sex + as.numeric(e016z), family = binomial(link = "logit"), data = dat_kat13)
+fit_lr14 <- glm(e017a.k ~ Mbmi.k + Vbmi.k + sex + as.numeric(e016z), family = binomial(link = "logit"), data = dat_kat14)
+fit_lr15 <- glm(e017a.k ~ Mbmi.k + Vbmi.k + sex + as.numeric(e016z), family = binomial(link = "logit"), data = dat_kat15)
+fit_lr16 <- glm(e017a.k ~ Mbmi.k + Vbmi.k + sex + as.numeric(e016z), family = binomial(link = "logit"), data = dat_kat16)
+summary(fit_lr12)$coefficients
+summary(fit_lr13)$coefficients
+summary(fit_lr14)$coefficients
+summary(fit_lr15)$coefficients
+summary(fit_lr16)$coefficients
+```

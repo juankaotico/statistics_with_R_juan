@@ -1,0 +1,219 @@
+---
+title: "Exercises 3a - Solutions"
+author: "Stefan Konigorski"
+date: "November 4, 2019"
+output:
+  html_document: default
+---
+
+## Exercise 1: Compute frequency tables in NoShow dataset
+
+```{r}
+# Load data
+load(file = url("https://www.dropbox.com/s/32pyh375kjkqv14/NoShowdata.RData?dl=1"))
+
+# Show the header of the data
+# options(dplyr.width = Inf) # to show all columns
+head(NoShowdata)
+
+# Question 1: Which relevant variables are measured on a nominal scale?
+# -> Gender, Neighbourhood, Scholarship, Hipertension, Diabetes, Alcoholism, Handcap, SMS_reveived, No-show
+
+# Question 2: Compute frequencies of variables 
+table(NoShowdata$Gender)
+table(NoShowdata$Scholarship)
+table(NoShowdata$Hipertension)
+table(NoShowdata$Diabetes)
+table(NoShowdata$Alcoholism)
+table(NoShowdata$Handcap)
+table(NoShowdata$"SMS_received")
+table(NoShowdata$"No-show")
+
+# Meaning?
+# -> See also https://www.kaggle.com/joniarroba/noshowappointments
+
+# Compute relative frequencies of these relevant nominal variables
+n <- nrow(NoShowdata)
+table(NoShowdata$Gender) / n
+table(NoShowdata$Scholarship) / n
+table(NoShowdata$Hipertension) / n
+table(NoShowdata$Diabetes) / n
+table(NoShowdata$Alcoholism) / n
+table(NoShowdata$Handcap) / n
+table(NoShowdata$"SMS_received") / n
+table(NoShowdata$"No-show") / n
+
+# Alternative and easier way to compute relative frequencies with prop.table() function
+prop.table(table(NoShowdata$Gender))
+prop.table(table(NoShowdata$Scholarship))
+prop.table(table(NoShowdata$Hipertension))
+prop.table(table(NoShowdata$Diabetes))
+prop.table(table(NoShowdata$Alcoholism))
+prop.table(table(NoShowdata$Handcap))
+prop.table(table(NoShowdata$"SMS_received"))
+prop.table(table(NoShowdata$"No-show"))
+
+### Alternatives
+install.packages("janitor")
+library(janitor)
+janitor::tabyl(NoShowdata$Gender)
+janitor::tabyl(NoShowdata$Handcap)
+# this can also additionally show missings:
+testdat <- NoShowdata
+testdat$Gender[1] <- NA
+janitor::tabyl(testdat$Gender)
+
+install.packages("summarytools")
+library(summarytools)
+summarytools::freq(testdat$Gender)
+summarytools::freq(testdat$Gender, style="rmarkdown")
+```
+
+
+```{r}
+# Question 3: Compute 2-way frequency tables of each variable with NoShow variable (cross-tab, contingency table)
+table1 <- table(NoShowdata$"SMS_received", NoShowdata$"No-show")
+table1
+
+# relative frequencies
+prop.table(table1, 1) # A frequencies (summed over B)
+prop.table(table1, 2) # B frequencies (summed over A)
+
+install.packages("expss")
+library(expss)
+expss::cro(NoShowdata$"SMS_received", NoShowdata$"No-show")
+expss::cro(NoShowdata$"SMS_received", NoShowdata$"No-show", subgroup = (NoShowdata$Gender=="M"))
+
+# Preparation for a nicer table
+helpdata2 <- NoShowdata[, c(3, 13:14)]
+names(helpdata2) <- c("gender", "sms", "NoShow")
+helpdata2$sms <- factor(helpdata2$sms, labels = c("No", "Yes"))
+helpdata2 = apply_labels(helpdata2,
+                      gender = "Gender of patient",
+                      sms = "Was patient sent a reminder SMS?",
+                      NoShow = "Was patient a no show?"
+                      )
+calculate(helpdata2, cro(sms, NoShow))
+```
+
+```{r}
+# Question 4: Export tables
+
+# create tables
+table1 <- table(NoShowdata$"SMS_received", NoShowdata$"No-show")
+table2 <- calculate(helpdata2, cro(sms, NoShow))
+table1
+table2
+
+install.packages("writexl")
+library(writexl)
+write_xlsx(data.frame(table1), "Table1.xlsx")
+write_xlsx(data.frame(table2), "Table1.xlsx")
+
+# Alternative, but this needs Java installation, from e.g. https://www.java.com/en/download/, and worked for me only in a 32bit R version (R i386), not in R Markdown (which uses the 64bit R installation for me):
+# install.packages("xlsx") 
+# library(xlsx)
+# write.xlsx(table1, "Table1b.xlsx")
+
+# can also use write.table() and write.csv() functions 
+```
+
+## Exercise 2: Compute frequency plots in the NoShow dataset and save them
+
+```{r}
+# Load data
+load(file = url("https://www.dropbox.com/s/32pyh375kjkqv14/NoShowdata.RData?dl=1"))
+
+# Compute barplots and mosaicplots of the No-Show variable as well as of other variables.
+barplot(table(NoShowdata$"No-show"))
+
+### Insert: can you generate a histogram of NoShow (which doesn't make sense)?
+# hist(NoShowdata$"No-show") # gives error
+NoShowdata$Noshow <- factor(NoShowdata$"No-show")
+# hist(NoShowdata$Noshow) # gives error
+hist(as.numeric(NoShowdata$Noshow))
+# Lessons:
+# (1) R functions do different things (or nothing) with variables/objects of different classes.
+# (2) Most R functions are restricted to those things that make sense ;-)
+
+pie(table(NoShowdata$"No-show"))
+
+table1 <- table(NoShowdata$"SMS_received", NoShowdata$"No-show")
+barplot(table1)
+?barplot
+barplot(table1, beside = TRUE)
+
+# generate and save plots -> change path!
+
+# bar plot 1, save in pdf -> then, the plot is not shown here!
+pdf(file = "Fig1.pdf")
+barplot(table1, beside = TRUE)
+dev.off()
+
+# bar plot 2, save in pdf, adjusts the size of the plot
+pdf(file = "Fig2.pdf", height = 15, width = 15)
+barplot(table1, beside = TRUE)
+dev.off()
+
+# bar plot, save in jpeg
+jpeg(file = "Fig1.jpg", quality = 100, width = 1000, height = 1000)
+barplot(table1, beside = TRUE)
+dev.off()
+
+# further option for stratified frequency plots: mosaic plots
+NoShowdata$sms <- factor(NoShowdata$"SMS_received", labels = c("No", "Yes"))
+table1 <- table(NoShowdata$sms, NoShowdata$"No-show")
+mosaicplot(table1, main = "Stratified mosaic plot of SMS received and No Show", xlab = "SMS reveived?", ylab = "No Show?", color = TRUE)
+```
+
+# Exercise 3: Descriptive statistics of ordinal and metric variables
+
+```{r}
+# Load data
+load(file = url("https://www.dropbox.com/s/j50z4e17l5aabk8/Pima_diabetes.RData?dl=1"))
+Pima_diabetes$Diabetes <- factor(Pima_diabetes$Outcome, labels = c("no", "yes"))
+
+# look at data
+head(Pima_diabetes)
+
+# Descriptive statistics of BMI: compute min, max, range, median, mad, mean, sd, variance, skewness and kurtosis of BMI
+min(Pima_diabetes$BMI)
+max(Pima_diabetes$BMI)
+range(Pima_diabetes$BMI)
+
+median(Pima_diabetes$BMI)
+mad(Pima_diabetes$BMI)
+
+mean(Pima_diabetes$BMI)
+sd(Pima_diabetes$BMI)
+var(Pima_diabetes$BMI)
+
+summary(Pima_diabetes$BMI)
+
+quantile(Pima_diabetes$BMI, seq(0, 1, 0.25))
+
+#install.packages("fBasics")
+library(fBasics)
+skewness(Pima_diabetes$BMI)
+kurtosis(Pima_diabetes$BMI)
+
+# Compute mean of BMI stratified by diabetes and stratified by Pregnancies using the 'tapply' function
+tapply(Pima_diabetes$BMI, Pima_diabetes$Diabetes, mean, na.rm = TRUE)
+tapply(Pima_diabetes$BMI, Pima_diabetes$Pregnancies, median, na.rm = TRUE)
+```
+
+# Exercise 4: Plots of ordinal and metric variables
+
+```{r}
+# Load data
+load(file = url("https://www.dropbox.com/s/j50z4e17l5aabk8/Pima_diabetes.RData?dl=1"))
+Pima_diabetes$Diabetes <- factor(Pima_diabetes$Outcome, labels = c("no", "yes"))
+
+# Generate a histogram, boxplot, scatterplot, and normal quantile-quantile plot of BMI.
+hist(Pima_diabetes$BMI)
+boxplot(Pima_diabetes$BMI)
+plot(Pima_diabetes$BMI)
+plot(Pima_diabetes$BMI, Pima_diabetes$Insulin)
+qqnorm(Pima_diabetes$BMI); abline(0, 1)
+qqnorm(scale(Pima_diabetes$BMI)); abline(0, 1)
+```

@@ -1,0 +1,221 @@
+---
+title: "Homework 2 - solutions"
+author: "Stefan Konigorski"
+date: "October 28, 2019"
+output:
+  html_document: default
+---
+
+Task: Download this R Markdown file, save it on your computer, and perform all the below tasks by inserting your answer in text or by inserting R chunks below. After you are done, upload this file with your solutions on Moodle.
+
+# Exercise 1
+
+**Task a**: Create an R chunk here to insert R code. Add R code in this R chunk to perform a simple calculation (e.g. calculate the sum of 1 and 2).
+
+**Solution a**: R code can be inserted and executed into the R Markdown file here through R chunks. The start of such an R chunk in the document is specified by **\```\{r\}**, the end by **\```**, and inbetween R code can be inserted. For example, writing
+
+\```\{r\}
+
+1 + 2
+
+\```
+
+creates the following output in the knitted R Markdown file:
+
+```{r}
+1 + 2
+```
+
+**Task b**:
+
+b) Create an R chunk with a basic calculation (e.g. 1+1). Try out the different ways how to include this in the knitted report (see lecture slides page 13).
+
+**Solution b**:
+
+First, lets insert an basic R chunk without further designation:
+
+```{r}
+1 + 1
+```
+
+This both shows the R code as well as the result in the knitted file. Underlying to this are the default settings eval = TRUE, echo = TRUE, which can be written explicitely as well:
+
+```{r, eval = TRUE, echo = TRUE}
+1 + 1
+```
+
+Now setting eval = FALSE just shows the R code but doesn't compute results.
+
+```{r, eval = FALSE}
+1 + 1
+```
+
+On the other side, the option echo = FALSE doesn't show the R code but the computed output:
+
+```{r, echo = FALSE}
+1 + 1
+```
+
+## Exercise 2: Manipulating variables and data frames
+
+**Task:** Load the Pima Indian dataset:
+
+```{r}
+dat_ex2 <- read.csv(file = url("https://www.dropbox.com/s/4s4rhf6abda6gw2/Pima_diabetes.csv?dl=1"))
+```
+
+and answer the following questions.
+
+**Solutions:**
+
+```{r}
+# How many women have Glucose levels 0?
+table(dat_ex2$Glucose == 0)
+
+# How many women have Insulin levels 0?
+table(dat_ex2$Insulin == 0)
+
+# How many women have both Glucose levels as well as Insulin levels 0?
+table((dat_ex2$Glucose == 0) & (dat_ex2$Insulin == 0))
+
+# How many women have either Glucose levels or Insulin levels 0?
+table((dat_ex2$Glucose == 0) | (dat_ex2$Insulin == 0))
+
+# How many women have missing BMI values?
+table(is.na(dat_ex2$BMI))
+
+# How many women have BMI larger than 40?
+table(dat_ex2$BMI > 40)
+
+# Build a dataset that only includes the women with BMI>40
+dat_BMI40 <- dat_ex2[dat_ex2$BMI > 40, ]
+
+# Create a new variable named BMIOutlier, which has the value 0 if a women has BMI smaller or equal 50, and 1 if she has BMI higher than 50
+# For this, first create the variable and set its values to 0 for everyone
+dat_ex2$BMIOutlier <- 0
+# then set it to 1 for those with BMI higher than 50
+dat_ex2$BMIOutlier[dat_ex2$BMI > 50] <- 1
+
+# check results
+head(dat_ex2)
+table(dat_ex2$BMIOutlier)
+
+# Alternative way:
+dat_ex2$BMIOutlier2 <- ifelse(dat_ex2$BMI > 50, 1, 0)
+
+# check
+table(dat_ex2$BMIOutlier)
+table(dat_ex2$BMIOutlier, dat_ex2$BMIOutlier2)
+
+```
+
+## Exercise 3
+
+**Task:** Explore merging two datasets.
+
+As a preparation, do the following code to create 2 data.frames
+
+```{r}
+# import data
+dat_ex3 <- read.csv(file = url("https://www.dropbox.com/s/4s4rhf6abda6gw2/Pima_diabetes.csv?dl=1"))
+
+# extract two smaller data sets
+dat3_1 <- dat_ex3[1:100, 1:3]
+dat3_2 <- dat_ex3[101:300, 1:3]
+
+dat3_3 <- dat_ex3[1:100, 1:3]
+dat3_4 <- dat_ex3[1:100, 4:6]
+```
+
+**Task 3a:** Think about how you can use the [.] operator to respectively piece dat3_1 and dat3_2, and dat3_3 and dat3_4 together into one data frame.
+
+**Solution:**
+
+```{r}
+# First, I want to create a new dataset dat3_12 which integrates dat3_1 and dat3_2, and adds the observations of dat3_2 (i.e. rows) below the rows of dat3_1
+
+# One easy way how to do this directly is using the rbind() function:
+dat3_12_vs1 <- rbind(dat3_1, dat3_2)
+# similarly, dat3_3 and dat3_4 can be combined by adding the columns of dat3_4 to the columns of dat3_3 using the cbind() function:
+dat3_34_vs1 <- cbind(dat3_3, dat3_4)
+
+# The above are among the easiest ways how to do it, and what I would recommend. Alternatively you can also do it using the basic tools we have learned so far and using the [.] operator:
+# first create the new data frame which will combine both files dat3_12_vs2, as a copy of dat3_1. then add the rows below using the [.] operator
+
+dat3_12_vs2 <- dat3_1
+dat3_12_vs2[101:300, ] <- dat3_2
+
+# check if they are the same
+all(dat3_12_vs1 == dat3_12_vs2)
+# -> yes! :-)
+
+# do the same to combine dat3_3 and dat3_4 and check:
+dat3_34_vs2 <- dat3_3
+dat3_34_vs2[, 4:6] <- dat3_4
+all(dat3_34_vs1 == dat3_34_vs2)
+```
+
+**Task 3b:** Explore the help of the merge() function in R in order to achieve the same goal of combining dat3_3 and dat3_4 together into one data frame. Hint: first create an ID variable in each data frame, then use this in the "by" argument.
+
+**Solution:**
+
+```{r}
+# look at help of the merge function
+# ?merge
+
+# try naive way
+dat3_34_vs3 <- merge(dat3_3, dat3_4)
+# -> hm ... 10000 observations of 6 variables ... that doesn't seem right. underlying this is that the merge functions uses the by argument to merge the variables/observations of two datasets based on that variable, which is assumed to be contained in both datasets. If such a variable is not present, the merge() function tries do something, which here doesn't make sense. 
+# hence create such a common variable first, namely an ID variable which just numbers the observations
+dat3_3$ID <- 1:100
+dat3_4$ID <- 1:100
+
+# have a look at what we have done:
+head(dat3_3)
+head(dat3_4)
+
+# now merge again and check
+dat3_34_vs3 <- merge(dat3_3, dat3_4, by = "ID")
+head(dat3_34_vs3)
+# -> looks good :-)
+```
+
+## Exercise 4 (optional): Times and dates in R
+
+**Task:** Create an Excel file with 5 observations of 2 variables. Variable 1 is just an ID variable (number 1-5 or character string etc.), and variable 2 is a date/time variable. Use variable 2 to describe the time (and day) you had lunch in the last 5 days. Then try to import the Excel file with both variables into R and/or transform the variables in R to Date or POSIXct variables.
+
+**Solution:**
+Step 1: Create the Excel file. I have saved this file as **R_2_homework_ex4.xlsx**, and its content looks as follows:
+
+```{r, echo = FALSE, fig.cap="Figure 1. Screenshot of entries in Excel file.", out.width = '50%'}
+knitr::include_graphics("C:/Users/stefan.konigorski/Dropbox/@HPI/Teaching/0_R_Statistical_Epidemiology/1_WS201920/VL2/R_2_homework_ex4.JPG")
+```
+
+Step 2: Import Excel file into R, check it, and save it as Rdata file:
+
+```{r}
+#install.packages("readxl") 
+# load package
+library(readxl)
+# import dataset
+dat_ex4 <- read_excel("C:/Users/stefan.konigorski/Dropbox/@HPI/Teaching/0_R_Statistical_Epidemiology/1_WS201920/VL2/R_2_homework_ex4.xlsx", sheet = 1)
+
+# check
+head(dat_ex4) #-> looks good, but lunchtime is not yet recognized as a date/time variable, hence transform it.
+
+# create new date/time variable
+# Try the following at first:
+# dat_ex4$lunchtime_transf <- as.POSIXct(dat_ex4$lunchtime) 
+
+# -> this doesn't work right away; as.POSIXct() has several standard date/time formats that it tries, but my format is not among them, hence I have to tell the as.POSIXct() function explicitely how my date/time variable looks like using the format argument:
+
+dat_ex4$lunchtime_transf <- as.POSIXct(dat_ex4$lunchtime, format = "%d.%m.%Y %H:%M:%OS")
+head(dat_ex4) 
+
+# -> looks good :-) can you do some transformations with it?
+dat_ex4$lunchtime_transf
+dat_ex4$lunchtime_transf + 1
+
+# save
+save(dat_ex4, file = "C:/Users/stefan.konigorski/Dropbox/@HPI/Teaching/0_R_Statistical_Epidemiology/1_WS201920/VL2/R_2_homework_ex4.RData")
+```

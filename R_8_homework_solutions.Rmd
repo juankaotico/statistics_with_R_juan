@@ -1,0 +1,104 @@
+---
+title: "Homework 8 - Solutions"
+author: "Stefan Konigorski"
+date: "December 9, 2019"
+output:
+  html_document: default
+---
+
+Download this R Markdown file, save it on your computer, and perform all the below tasks by inserting your answer in text or by inserting R chunks below. After you are done, upload this file with your solutions on Moodle.
+
+## Load KiGGS data
+
+```{r}
+#dat_link <- url("https://www.dropbox.com/s/nbh0f6upejh7nr8/data.RData?dl=1")
+#load(dat_link)
+load("C:/Users/stefan.konigorski/Desktop/data_Teaching/KiGGS/KiGGS03_06.RData")
+dat <- KiGGS03_06
+```
+
+## Exercise 1: Correlation
+
+**Task:** In the KiGGS dataset, compute the Pearson and Spearman correlation coefficient for the two variables 'sys1' and 'sys2', as well as confidence intervals and hypothesis tests whether the two variables are associated or not. Interpret the results, and decide which of the two coefficients you would report in your analysis and why.
+
+**Solution:** 
+
+```{r}
+sbp1 <- as.numeric(as.character(dat$sys1))
+sbp2 <- as.numeric(as.character(dat$sys2))
+
+# correlation coefficients
+cor(sbp1, sbp2, use = "complete.obs", method = "pearson")
+cor(sbp1, sbp2, use = "complete.obs", method = "spearman")
+# -> both are high ie there is a strong positive correlation
+
+# 95% confidence intervals (is only computed in the cor.test function for Pearson's correlation coefficient):
+cor.test(sbp1, sbp2, use = "complete.obs", method = "pearson")$conf.int[1:2]
+# -> very tight around the point estimate; with 95% certainty the true correlation is between 0.84 and 0.85
+
+# hypothesis tests whether that correlation is 0 (or not)
+cor.test(sbp1, sbp2, use = "complete.obs", method = "pearson")$p.value
+cor.test(sbp1, sbp2, use = "complete.obs", method = "spearman")$p.value
+# -> both very small, i.e. reject null hypothesis, conclude that the correlation is different from 0.
+
+# which results to report? -> look at histogram:
+hist(sbp1)
+hist(sbp2)
+# -> both are metric variables, and approx. normally distributed. Hence report Pearson correlation coefficient.
+```
+
+## Exercise 2: Linear regression
+
+**Task:** 
+a) Predict sys2 by sys1 using a simple linear regression, and interpret the results.
+
+**Solution:** 
+
+```{r}
+# compute simple linear regression
+fit1 <- lm(sbp2 ~ sbp1)
+summary(fit1)
+
+# get confidence intervals for regression coefficient:
+library(jtools)
+jtools::summ(fit1, exp = F, confint = T, model.fit = F, digits = 3)
+
+# Interpretation:
+# - Regression coefficient of sbp1 is 0.83, i.e. for every unit of that sbp1 (mmHg) increases, the model predicts that sbp2 (of the same child) increases (on average) by 0.83 units.
+# - The p-value of the hypothesis test whether that coefficient is 0 (or not) is very small: conclude that there is an association between sbp1 and sbp2.
+# - R^2 = 0.72 -> 72% of the variance of sbp2 can be explained by sbp1, ie this is a good model!
+```
+
+**Task:** 
+b) Add age2 and sex as predictors to the linear regression model above, and interpret the results. 
+
+**Solution:** 
+
+```{r}
+# compute multiple linear regression
+fit2 <- lm(sbp2 ~ sbp1 + dat$sex + dat$age2)
+summary(fit2)
+
+# Some interpretations:
+# all regression coefficients in this model are now adjusted for the effect of the other variables, i.e. for comparing two children that have the same values in the other variables in the model. For example:
+# - Regression coefficient of sbp1 is now 0.73, i.e. for every unit of that sbp1 (mmHg) increases, the model predicts that sbp2 (of the same child) increases on (on average) by 0.73 units - for two children of the same sex and age.
+# - Interpretation of age: e.g. coefficient of dat$age24 - 5 J. is -0.33. That means that compared to 2-3 year old children (reference), the model predicts that the sbp2 is 0.33mmHg lower in 4-5 year old children, for two children of the same sex and with the same sbp1. 2-3year old children are the reference since there are no children 0-1y with sbp2 measures:
+tapply(sbp1, dat$age2, mean, na.rm = T)
+# - The hypothesis test again concludes that there is an association between sbp1 and sbp2 - also after adjusting for effects of sex and age.
+# - R^2 = 0.74 -> age and sex explain only very little variance of sbp2 that is not already explained by sbp1 (but this doesn't mean they don't explain much variance, part of this is already contained in sbp1!)
+```
+
+## Exercise 3: Visualization of regression (optional)
+
+**Task:** 
+Use the functions in ggplot2 to compute a scatter plot and insert the regression line of the analysis in exercise 2a.
+
+**Solution:** 
+
+```{r}
+library(ggplot2)
+dat_for_plot <- data.frame(sbp1, sbp2)
+ggplot(dat_for_plot, aes(x = sbp1, y = sbp2)) +
+  geom_point() +
+  geom_smooth(method = 'lm', formula = y ~ x)
+```

@@ -1,0 +1,74 @@
+---
+title: "Exercise 4: Assumptions in linear regression"
+author: "Stefan Konigorski"
+date: "December 9, 2019"
+output:
+  html_document: default
+---
+
+## Load KiGGS data
+
+```{r}
+#dat_link <- url("https://www.dropbox.com/s/nbh0f6upejh7nr8/data.RData?dl=1")
+#load(dat_link)
+load("C:/Users/stefan.konigorski/Desktop/data_Teaching/KiGGS/KiGGS03_06.RData")
+dat <- KiGGS03_06
+```
+
+## Examine assumptions of exercise 3
+
+Use linear regression to investigate the question if the amount and frequency of eating pancakes is associated with the BMI of children.
+
+```{r}
+# variables and formatting
+bmi <- dat$bmiB
+pancake_amount <- dat$fq41a
+pancake_amount <- factor(pancake_amount, labels = c("never", "1/4 piece or less", "1/2 piece", "1 piece", "2 pieces", "3 pieces or more"))
+pancake_freq <- dat$fq41
+pancake_freq <- droplevels(pancake_freq)
+pancake_freq <- factor(pancake_freq, labels = c("never", "1x/month", "2-3x/month", "1-2x/week", "3-4x/week", "5-6x/week", "1x/day", "2-3x/day", "4-5x/day"))
+
+# possible models:
+fit1 <- lm(bmi ~ pancake_amount + pancake_freq)
+fit2 <- lm(bmi ~ as.numeric(pancake_amount) + as.numeric(pancake_freq))
+bmi_log <- log(bmi)
+fit3 <- lm(bmi_log ~ as.numeric(pancake_amount) + as.numeric(pancake_freq))
+
+summary(fit2)$coefficients
+summary(fit3)$coefficients
+
+# Histogram of Y (BMI):
+hist(bmi)
+qqnorm(scale(bmi)); abline(0,1)
+hist(bmi_log)
+qqnorm(scale(bmi_log)); abline(0,1)
+
+# Distribution of residuals, see e.g. second plot in:
+plot(fit1)
+
+# Linear relationship of Y with predictors:
+plot(pancake_amount, bmi)
+plot(as.numeric(pancake_amount), bmi)
+plot(pancake_freq, bmi)
+plot(as.numeric(pancake_freq), bmi)
+
+# Multicollinear?
+cor(as.numeric(pancake_amount), as.numeric(pancake_freq), use = "complete.obs")
+# This is an example of perfect collinearity, which shows in that the effects cannot be estimated of all categories of the factors.
+# As a result, you can also not trust the other coeffient estimates, e.g. when you change the order of the variables, you get completely different results:
+summary(lm(bmi ~ pancake_freq + pancake_amount))
+summary(lm(bmi ~ pancake_amount + pancake_freq))
+# Verify this by checking if the design matrix of the model (= matrix with all variables in the model = here: all shown dummy variables of pancake_freq and pancake_amount) has full rank (i.e. there is no variable that is a linear combination of the other variables)
+# For this, check how many dummy variables have been created:
+dim(model.matrix(fit1))
+# -> there are 14 variables in the design matrix. Intercept and 13 dummy variables (5 = 6-1 for pancake_amount; 8 = 10-1 and again -1 for pancake_freq since there is no one in the category ">5x/day")
+# Inspect rank of this matrix (should be the same as the number of columns):
+fit1$rank
+# this can also be computed with: rankMatrix(model.matrix(fit1))
+# -> this is only 13, i.e. does not have full rank
+# (Explanation: there is only 1 person in the category "4-5x/day" of pancake_freq, she is causing problems)
+
+# Homoscedasticity of the residuals? First plot in:
+plot(fit1)
+```
+

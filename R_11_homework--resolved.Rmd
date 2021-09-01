@@ -1,0 +1,346 @@
+---
+title: "Homework 11"
+author: "Juan Carlos Niño"
+date: "January 19, 2020"
+output:
+  html_document: default
+---
+
+Download this R Markdown file, save it on your computer, and perform all the below tasks by inserting your answer in text or by inserting R chunks below. After you are done, upload this file with your solutions on Moodle.
+
+For all exercises, use the KiGGS dataset.
+
+## Exercise 1: Analysis of variance
+
+Choose 1 suitable outcome variable of interest, 2 factors, and 1 quantitative covariate, and compute 5 ANOVA models: (i-ii) one model with each factors separately, (iii) one model with both factors, (iv) one model with both factors and their interaction, (v) one model with both factors, their interaction, and the covariate.
+
+
+
+will use the KIGSS dataset to see if the Haemoglobin (HAEM) differs in kids from their age, sex and then adjusting it to the BMI.
+
+## Prepare the data
+
+Load KiGGS data:
+
+```{r}
+dat_link <- url("https://www.dropbox.com/s/nbh0f6upejh7nr8/data.RData?dl=1")
+load(dat_link)
+dat <- KiGGS03_06
+
+dat$sex <- factor(dat$sex, labels = c("boys", "girls"))
+dat$age2 <- factor(dat$age2, labels = c("0-1y", "2-3y", "4-5y", "6-7y", "8-9y", "10-11y", "12-13y", "14-15y", "16-17y"))
+```
+
+#i
+
+First will analyze with age
+
+```{r}
+# Preparation
+str(dat$age2)
+str(dat$HAEM)
+# -> HAEM is a factor, transform to numeric
+dat$HAEM <- as.numeric(as.character(dat$HAEM))
+# Look at distribution:
+hist(dat$HAEM)
+# -> close to normal distribution
+```
+
+```{r}
+# Descriptive statistics:
+tapply(dat$HAEM, dat$age2, mean, na.rm = TRUE)
+
+```
+
+
+```{r}
+
+fit1 <- aov(HAEM ~ age2, data = dat)
+fit1
+summary(fit1)
+
+# Alternative:
+fit1_alt <- lm(HAEM ~ age2, data = dat)
+summary(fit1_alt)
+anova(fit1_alt)
+
+
+# Predicted:
+predict(fit1, data.frame(age2 = levels(dat$age2)))
+
+```
+
+#ii
+
+second will analyze with sex
+
+```{r}
+# Preparation
+str(dat$sex)
+str(dat$HAEM)
+# -> HAEM is a factor, transform to numeric
+dat$HAEM <- as.numeric(as.character(dat$HAEM))
+# Look at distribution:
+hist(dat$HAEM)
+# -> close to normal distribution
+```
+
+```{r}
+# Descriptive statistics:
+tapply(dat$HAEM, dat$sex, mean, na.rm = TRUE)
+
+```
+
+
+```{r}
+
+fit2 <- aov(HAEM ~ sex, data = dat)
+fit2
+summary(fit2)
+
+# Alternative:
+fit2_alt <- lm(HAEM ~ sex, data = dat)
+summary(fit2_alt)
+anova(fit2_alt)
+
+
+# Predicted:
+predict(fit2, data.frame(sex = levels(dat$sex)))
+
+```
+
+
+#iii
+
+model with both factors
+
+```{r}
+# Descriptive statistics:
+tapply(dat$HAEM, dat$age2, mean, na.rm = TRUE)
+tapply(dat$HAEM, dat$sex, mean, na.rm = TRUE)
+tapply(dat$HAEM, list(dat$age2, dat$sex), mean, na.rm = TRUE)
+```
+
+```{r}
+# ANOVA:
+fit3 <- aov(HAEM ~ age2 + sex, data = dat)
+summary(fit3)
+
+# Alternative:
+fit3_alt <- lm(HAEM ~ age2 + sex, data = dat)
+summary(fit3_alt)
+anova(fit3_alt)
+
+# Predicted means of HAEM in each factor level of age2:
+# Boys: 
+predict(fit3, data.frame(age2 = levels(dat$age2), sex = levels(dat$sex)[1])) # levels(dat$sex)[1] is "boys"
+# Girls: 
+predict(fit3, data.frame(age2 = levels(dat$age2), sex = levels(dat$sex)[2])) # levels(dat$sex)[2] ist "girls"
+# -> these are not equivalent to the descriptive statistics from tapply, since we didn't consider interactions
+tapply(dat$HAEM, list(dat$age2, dat$sex), mean, na.rm = TRUE)
+```
+
+#iv
+
+model with both factors and the interaction between
+
+
+
+```{r}
+# Descriptive statistics:
+tapply(dat$HAEM, list(dat$age2, dat$sex), mean, na.rm = TRUE)
+```
+
+```{r}
+# ANOVA:
+fit4 <- aov(HAEM ~ age2 + sex + age2:sex, data = dat)
+summary(fit4)
+
+# Alternative:
+fit4_alt <- aov(HAEM ~ age2*sex, data = dat)
+summary(fit4_alt)
+```
+
+```{r}
+# Visualization in profile plots
+#install.packages("interactions")
+library(interactions)
+
+# Preparation: the function cat_plot for creating profile plots needs the results from aov() as input, computed with a dataset without missing values. i.e. first create a dataset without missing values:
+data_for_analysis <- data.frame(HAEM = dat$HAEM, age2 = dat$age2, sex = dat$sex)
+data_for_analysis <- data_for_analysis[complete.cases(data_for_analysis),]
+data_for_analysis <- droplevels(data_for_analysis)
+
+# Now recompute ANOVA and use the cat_plot function. Here are 3 different visualizations:
+fit4_new <- aov(HAEM ~ age2 + sex + age2:sex, data = data_for_analysis)
+cat_plot(fit4_new, pred = age2, modx = sex)
+cat_plot(fit4_new, pred = age2, modx = sex, plot.points = TRUE)
+(plot1 <- cat_plot(fit4_new, pred = age2, modx = sex, geom = "line") )  
+# -> the last line saves the plot in the object plot1 (so that we can do stuff with this later) and also gives the results of the right-hand side.
+
+# Compare to model without interaction:
+cat_plot(aov(HAEM ~ age2 + sex, data = data_for_analysis), pred = age2, modx = sex, geom = "line")
+
+# Predicted means of HAEM in each factor level of age2:
+# Boys: 
+predict(fit4, data.frame(age2 = levels(data_for_analysis$age2), sex = levels(data_for_analysis$sex)[1])) # levels(data_for_analysis$sex)[1] is "boys"
+# Girls: 
+predict(fit4, data.frame(age2 = levels(data_for_analysis$age2), sex = levels(data_for_analysis$sex)[2])) # levels(data_for_analysis$sex)[2] is "girls"
+# -> they are equal to the descriptive statistics above from tapply!
+```
+
+
+#v
+
+model with both factors, the interaction between and the covariance
+
+```{r}
+# Preparation
+data_for_analysis2 <- data.frame(HAEM = dat$HAEM, age2 = dat$age2, sex = dat$sex, bmiB = dat$bmiB)
+data_for_analysis2 <- data_for_analysis2[complete.cases(data_for_analysis2),]
+data_for_analysis2 <- droplevels(data_for_analysis2)
+```
+
+```{r}
+# ANOVA:
+fit5 <- aov(HAEM ~ age2 + sex + age2:sex + bmiB, data = data_for_analysis2)
+summary(fit5)
+
+# alternative with BMI as first variable:
+fit5b <- aov(HAEM ~ bmiB + age2 + sex + age2:sex, data = data_for_analysis2)
+summary(fit5b)
+```
+
+```{r}
+# Visualization
+plot2 <- cat_plot(fit5, pred = age2, modx = sex, geom = "line")
+plot1
+plot2
+```
+
+```{r}
+# Extraction of the predicted means (here: identical to the descriptive statistics above)
+helpdat <- data.frame(age2 = rep(levels(data_for_analysis2$age2), each = 2), 
+                      sex = rep(levels(data_for_analysis2$sex),), 
+                      bmiB = mean(data_for_analysis2$bmiB))
+helpdat
+data.frame( helpdat, pred_without_BMI =  predict(fit4_new, helpdat), pred_with_BMI = predict(fit5, helpdat))
+# for comparison:
+tapply(dat$HAEM, list(dat$age2, dat$sex), mean, na.rm = TRUE)
+```
+
+
+
+Interpret the results: which factor is associated with the outcome? Is there a significant interaction effect? Does anything change after adjusting for the covariate?
+
+
+Both factor, sex and the age of the kids is related to the amount of haemoglobin.
+The interaction is minimal for the outcome
+After adjusting the BMI the changes are minimal around the second digit
+
+
+## Exercise 2: Posthoc tests in analysis of variance
+
+Perform posthoc t-tests with and without a correction for multiple testing for the ANOVA in exercise 1, where we tested whether systolic blood pressure differed between age groups.
+
+
+#Copy from the excercise
+
+```{r}
+# Preparation
+str(dat$age2)
+str(dat$sys12)
+# -> sys12 is a factor, transform to numeric
+dat$sys12 <- as.numeric(as.character(dat$sys12))
+# Look at distribution:
+hist(dat$sys12)
+# -> close to normal distribution
+```
+
+```{r}
+# Descriptive statistics:
+tapply(dat$sys12, dat$age2, mean, na.rm = TRUE)
+# -> Group of 0-1 year olds cannot be computed
+# -> Check: 
+dat$sys12[dat$age2 == "0-1y"]
+# Are really all NA?
+table(is.na(dat$sys12[dat$age2 == "0-1y"]))
+# -> yes
+```
+
+```{r}
+# ANOVA: Y has to be numeric (i.e. cannot be a factor, which is why we did the preparation above)
+fit6 <- aov(sys12 ~ age2, data = dat)
+fit6
+summary(fit6)
+
+# Alternatively, you can compute it with the anova function (which yields identical results of the ANOVA):
+fit6_alt <- lm(sys12 ~ age2, data = dat)
+summary(fit6_alt)
+anova(fit6_alt)
+
+# Remember: summary(aov()) or anova(lm()) without summary
+
+# Predicted means of sys12 in each factor level of age2. For this, the model (fit1) has to be supplied to the predict function as well as the values, which the predictor variable (age2) should have (i.e. the categories):
+predict(fit6, data.frame(age2 = levels(dat$age2)[-1]))
+# -> these are here equivalent to the descriptive statistics i.e. the empirical means - but this is not the case in general, see next example.
+```
+
+#Evaluation of posthoc
+
+```{r}
+sys12<- dat$sys12
+age <- dat$age2
+tapply(dat$sys12, dat$age2, mean, na.rm = TRUE)
+pairwise.t.test(sys12, age, p.adjust.method = "none")
+```
+
+```{r}
+pairwise.t.test(sys12, age, p.adjust.method = "bonf")
+```
+
+
+```{r}
+pairwise.t.test(sys12, age, p.adjust.method = "holm")
+```
+I don't know why does not work in pair.t.test but it does with Tukey
+
+```{r}
+TukeyHSD(fit6)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

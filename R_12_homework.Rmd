@@ -1,0 +1,51 @@
+---
+title: "Homework 12"
+author: "Stefan Konigorski"
+date: "January 20, 2020"
+output:
+  html_document: default
+---
+
+Download this R Markdown file, save it on your computer, and perform all the below tasks by inserting your answer in text or by inserting R chunks below. After you are done, upload this file with your solutions on Moodle.
+
+## Exercise 1: Linear mixed model for hierarchical data
+
+Load the HRS dataset and do the following preparations:
+
+```{r}
+library(readr)
+dat_link <- url("https://www.dropbox.com/s/yox8fvt91ff73ye/hrs.RData?dl=1")
+load(dat_link)
+#load("C:/Users/stefan.konigorski/Desktop/data_Teaching/HRS/CogImp/hrs.RData")
+
+# Preparations
+# rename variable at first timepoint
+names(hrs)[5] <- "R1IMRC"
+# define variable at second timepoint - Integrate the variables R2AIMRC10 and R2HIMRC20, which both capture different subgroups of the sample at the second timepoint.
+table(is.na(hrs$R2AIMRC10)) # -> only ~7000 of ~36000 observations
+table(is.na(hrs$R2HIMRC20)) # -> only ~10000 of ~36000 observations
+table(!is.na(hrs$R2HIMRC20) & !is.na(hrs$R2AIMRC10)) # -> no person has a value at both variables, i.e. the variables complement each other
+hrs$R2IMRC <- rowSums( cbind (hrs$R2AIMRC10, hrs$R2HIMRC20), na.rm=TRUE)
+hrs$R2IMRC[!(!is.na(hrs$R2HIMRC20) | !is.na(hrs$R2AIMRC10))] <- NA
+table(is.na(hrs$R2IMRC))
+# Rescale R1IMRC and R2IMRC onto the same scale as all other variables (measures 3-12 were on a scale of 1-10, measures 1-2 on the scale 1-20)
+hrs$R1IMRC <- hrs$R1IMRC/2
+hrs$R2IMRC <- hrs$R2IMRC/2
+
+# Extract variables for first investigation
+data_IMRC <- data.frame(HHID = hrs$HHID, PN = hrs$PN, HHID_PN = paste(hrs$HHID, hrs$PN, sep = "_"),
+                        T1 = hrs$R1IMRC, T2 = hrs$R2IMRC, T3 = hrs$R3IMRC, T4 = hrs$R4IMRC, T5 = hrs$R5IMRC, T6 = hrs$R6IMRC,
+                        T7 = hrs$R7IMRC, T8 = hrs$R8IMRC, T9 = hrs$R9IMRC, T10 = hrs$R10IMRC, T11 = hrs$R11IMRC, T12 = hrs$R12IMRC)
+```
+
+Answer the following questions: 
+
+a) How many observations are there in the dataset?
+
+b) How many households are there in the dataset (observations are clustered in households)?
+
+c) Now, compute a linear regression model to predict T2 by T1, i.e. the cognitive performance at the second timepoint by the cognitive performance at the first timepoint. Also, compute two linear mixed models, one with random intercept, one with random intercept+slope to predict T2 by T1. Compare the results, i.e. the estimated effect of T1 on T2. Are they similar, or are they very different?
+
+## Exercise 2: Linear mixed model for longitudinal data
+
+Go through R_12b_example_3.Rmd, run the R code, and look at the results. Write down 2 things that you learned by doing this, or 2 things that you found interesting. Also write down 2 questions on things that have not been clear to you in the modeling, or that you want to further investigate.

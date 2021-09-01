@@ -1,0 +1,200 @@
+---
+title: "Mixed models 2 - Example 1"
+author: "Stefan Konigorski"
+date: "January 20, 2020"
+output:
+  html_document: default
+---
+
+## Overview
+
+Use the BodyWeight dataset in R. It describes the weight and diet of rats over time
+
+Aim: describe the weight trajectories over time, and predict this by the diet.
+
+```{r}
+library(nlme)
+data(BodyWeight)
+dat <- BodyWeight
+
+# Inspect dataset
+head(dat)
+summary(dat)
+hist(dat$weight)
+boxplot(weight~Diet, data = dat) 
+hist(dat$weight[dat$Diet == 1])
+hist(dat$weight[dat$Diet == 2])
+hist(dat$weight[dat$Diet == 3])
+# -> outcome is not perfectly normally-distributed. But also not as bad as in example 2, so that regression/mixed models for normally-distributed variables could be ok here. I.e. for the illustration of mixed models it is ok, but other might be more appropriate for a fine analysis.
+```
+
+## Regression model 
+
+(assumption that all observations are independent)
+
+```{r}
+library(ggplot2)
+# Predict weight:
+fit1a <- lm(weight ~ Time, data = dat)
+summary(fit1a)
+
+# Model fit
+AIC(fit1a)
+
+# Prediction:
+pred.fit1a <- predict(fit1a)
+pred.fit1a[1:20]
+# -> each rat has the same predicted value at T1 (and at each other time point, respectively).
+
+# Visualization of the model (mean weight at each time point over all diet groups)
+ggplot(dat, aes(x = Time, y = weight, group = Diet, colour = Diet)) + 
+  geom_point() +
+  stat_summary(aes(y = pred.fit1a), fun.y = mean, geom = "line")
+# -> only one line since diet is not in the model - the colour of the line doesn't have a meaning.
+# This can be seen when you look at the predicted values for each rat -- the figure is identical, since the model predicts the same value for each rat.
+ggplot(dat, aes(x = Time, y = weight, group = Diet, colour = Diet)) + 
+  geom_point() +
+  geom_line(aes(y=pred.fit1a, group = Rat))
+
+# The figure shows that the 3 groups can be clearly separated, only one rat in group 2 (green) has a very high weight.
+# It can also be seen that there is a clearly visible increase in weight over time.
+```
+
+```{r}
+# Predict weight:
+fit1b <- lm(weight ~ Time + Diet, data = dat)
+summary(fit1b)
+
+# Model fit
+AIC(fit1b)
+
+# Prediction:
+pred.fit1b <- predict(fit1b)
+pred.fit1b[1:20]
+# -> each rat in the same diet group has the same predicted value at T1 (and at each other time point, respectively).
+
+# Visualization of the model (mean weight at each time point, per diet group)
+ggplot(dat, aes(x = Time, y = weight, group = Diet, colour = Diet)) + 
+  geom_point() +
+  stat_summary(aes(y = pred.fit1b, group = Diet, colour = Diet), fun.y = mean, geom = "line")
+# Identical figure when you look at the predicted values of each rat (since they are identical to the predicted values in which diet group they are):
+ggplot(dat, aes(x = Time, y = weight, group = Diet, colour = Diet)) + 
+  geom_point() +
+  geom_line(aes(y=pred.fit1b, group = Rat))
+```
+
+```{r}
+# Predict weight:
+fit1c <- lm(weight ~ Time*Diet, data = dat)
+summary(fit1c)
+
+# Model fit
+AIC(fit1c)
+
+# Prediction:
+pred.fit1c <- predict(fit1c)
+pred.fit1c[1:20]
+# -> each rat in the same diet group has the same predicted value at T1 (and at each other time point, respectively).
+
+# Visualization of the model (mean weight at each time point and per diet group, with interaction over time)
+ggplot(dat, aes(x = Time, y = weight, group = Diet, colour = Diet)) + 
+  geom_point() +
+  stat_summary(aes(y = pred.fit1c, group = Diet, colour = Diet), fun.y = mean, geom = "line")
+# Identical figure when you look at the predicted values of each rat (since they are identical to the predicted values in which diet group they are):
+ggplot(dat, aes(x = Time, y = weight, group = Diet, colour = Diet)) + 
+  geom_point() +
+  geom_line(aes(y=pred.fit1c, group = Rat))
+```
+
+Conclusion from these models: it is important to consider the diet groups, but also in the model including the interaction the data cannot be modeled optimally, since the weight trajectories over time are not constant linear.
+
+## Mixed models
+
+(consider that the measures are clustered within rats)
+
+```{r}
+# Predict weight:
+fit2a <- lme(weight ~ Time * Diet, data = dat, random = ~ 1 | Rat)
+summary(fit2a)
+
+# Prediction:
+pred.fit2a <- predict(fit2a)
+pred.fit2a[1:20]
+# -> each rat in the same diet group does NOT have the same predicted value at T1 (and at each other time point, respectively), since the rat-specific random intercept is added (same for all time points of a rat)
+
+# Visualization of the model (mean weight at each time point and per diet group, with interaction over time, considering the clustering in rats with the random intercept)
+ggplot(dat, aes(x = Time, y = weight, group = Diet, colour = Diet)) + 
+  geom_point() +
+  stat_summary(aes(y = pred.fit2a), fun.y = mean, geom = "line")
+# Similar prediction of the diet-specific time-trend as in model 1c, but clearly better model fit (with respect to AIC), since every rat can be predicted much better due to the subject-specific randome intercept value (different for each rat):
+ggplot(dat, aes(x = Time, y = weight, group = Diet, colour = Diet)) + 
+  geom_point() +
+  geom_line(aes(y=pred.fit2a, group = Rat))
+```
+
+```{r}
+# Predict weight:
+fit2b <- lme(weight ~ Time * Diet, data = dat, random = ~ Time | Rat)
+summary(fit2b)
+
+# Prediction:
+pred.fit2b <- predict(fit2b)
+pred.fit2b[1:20]
+# -> each rat in the same diet group does NOT have the same predicted value at T1 (and at each other time point, respectively), since the rat-specific random intercept and random slope is added (not the same for all time points of a rat)
+
+# Visualization of the model (mean weight at each time point and per diet group, with interaction over time, considering the clustering in rats with the random intercept+slope)
+ggplot(dat, aes(x = Time, y = weight, group = Diet, colour = Diet)) + 
+  geom_point() +
+  stat_summary(aes(y = pred.fit2b), fun.y = mean, geom = "line")
+# Similar prediction of the diet-specific time-trend as in model 2a, but again clearly better model fit (with respect to AIC), since the individual weight trajectories of each rat can be predicted better:
+ggplot(dat, aes(x = Time, y = weight, group = Diet, colour = Diet)) + 
+  geom_point() +
+  geom_line(aes(y=pred.fit2b, group = Rat))
+```
+
+```{r}
+# Predict weight:
+fit2c <- lme(weight ~ Time * Diet, data = dat, random = ~ Time | Rat, correlation = corSymm( form = ~ 1 | Rat))
+# doesn't converge
+```
+
+```{r}
+# Predict weight:
+fit2d <- lme(weight ~ Time * Diet, data = dat, random = ~ Time | Rat, correlation = corCompSymm( form = ~ 1 | Rat))
+summary(fit2d)
+# -> Practically identical to model 2b, since the estimated correlations between all values of a rat are practically 0 i.e. the epsilon covariance matrix is a diagonal matrix and the model is thereby practically identical to the above model
+
+# Prediction:
+pred.fit2d <- predict(fit2d)
+
+# Visualization of the model (mean weight at each time point and per diet group, with interaction over time, considering the clustering in rats with the random intercept+slope, and modeling the within-rat correlation with a compound symmetry error covariance matrix):
+ggplot(dat, aes(x = Time, y = weight, group = Diet, colour = Diet)) + 
+  geom_point() +
+  stat_summary(aes(y = pred.fit2d), fun.y = mean, geom = "line")
+# Prediction of the individual trajectories of the rats:
+ggplot(dat, aes(x = Time, y = weight, group = Diet, colour = Diet)) + 
+  geom_point() +
+  geom_line(aes(y=pred.fit2d, group = Rat))
+```
+
+```{r}
+# Predict weight:
+fit2e <- lme(weight ~ Time * Diet, data = dat, random = ~ Time | Rat, correlation = corAR1( form = ~ 1 | Rat))
+summary(fit2e)
+# Conclusions: 
+# (1) This model has the best model fit, i.e. the best prediction of the individual rat values.
+# (2) The aggregated overall model predictions though are not very different.
+# (3) The overall estimate of the effect over time is very similar. But: in linear regression the time effect was not significant here it is highly significant.
+
+# Prediction:
+pred.fit2e <- predict(fit2e)
+
+# Visualization of the model (mean weight at each time point and per diet group, with interaction over time, considering the clustering in rats with the random intercept+slope, and modeling the within-rat correlation with a AR1-error covariance matrix):
+ggplot(dat, aes(x = Time, y = weight, group = Diet, colour = Diet)) + 
+  geom_point() +
+  stat_summary(aes(y = pred.fit2e), fun.y = mean, geom = "line")
+# Prediction of the individual trajectories of the rats:
+ggplot(dat, aes(x = Time, y = weight, group = Diet, colour = Diet)) + 
+  geom_point() +
+  geom_line(aes(y=pred.fit2e, group = Rat))
+```

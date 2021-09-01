@@ -1,0 +1,21 @@
+---
+title: "Homework 11"
+author: "Stefan Konigorski"
+date: "January 13, 2020"
+output:
+  html_document: default
+---
+
+Download this R Markdown file, save it on your computer, and perform all the below tasks by inserting your answer in text or by inserting R chunks below. After you are done, upload this file with your solutions on Moodle.
+
+For all exercises, use the KiGGS dataset.
+
+## Exercise 1: Analysis of variance
+
+Choose 1 suitable outcome variable of interest, 2 factors, and 1 quantitative covariate, and compute 5 ANOVA models: (i-ii) one model with each factors separately, (iii) one model with both factors, (iv) one model with both factors and their interaction, (v) one model with both factors, their interaction, and the covariate.
+
+Interpret the results: which factor is associated with the outcome? Is there a significant interaction effect? Does anything change after adjusting for the covariate?
+
+## Exercise 2: Posthoc tests in analysis of variance
+
+Perform posthoc t-tests with and without a correction for multiple testing for the ANOVA in exercise 1, where we tested whether systolic blood pressure differed between age groups.

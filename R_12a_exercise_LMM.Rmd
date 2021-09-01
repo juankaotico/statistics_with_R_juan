@@ -1,0 +1,155 @@
+---
+title: "Linear mixed models in the MathAchieve dataset"
+author: "Stefan Konigorski"
+date: "January 20, 2020"
+output:
+  html_document: default
+---
+
+Note: this is a continuation of the exercise in R_11b_exercise_LMM.Rmd
+
+# Load and inspect MathAchieve dataset
+
+```{r}
+# install.packages("nlme")
+library(nlme)
+```
+
+## Model with SES, Minority, Sex as fixed-effects predictors
+
+```{r}
+fit3 <- lm(MathAch ~ SES + Sex + Minority, data = MathAchieve)
+summary(fit3)
+
+pred3 <- predict(fit3)
+plot(pred3, MathAchieve$MathAch, xlab = "Predicted MathAch values", ylab = "Actual MathAch values")
+```
+
+## Does school have an effect?
+
+```{r}
+head(MathAchieve)
+str(MathAchieve)
+
+length(levels(MathAchieve$School))
+
+# Look at association of SES and MathAch in different schools
+MathAchieve1 <- MathAchieve[MathAchieve$School %in% levels(MathAchieve$School)[1:16], ]
+MathAchieve2 <- MathAchieve[MathAchieve$School %in% levels(MathAchieve$School)[17:32], ]
+
+library(ggplot2)
+ggplot(MathAchieve1, aes(x = SES, y = MathAch)) + 
+  geom_point() +
+  geom_smooth(method = 'lm') +
+  facet_wrap( . ~ School, drop = FALSE)
+
+ggplot(MathAchieve2, aes(x = SES, y = MathAch)) + 
+  geom_point() +
+  geom_smooth(method = 'lm') +
+  facet_wrap( . ~ School, drop = FALSE)
+```
+
+How can we consider school? -> Use mixed models
+
+## Mixed models: random intercept
+
+```{r}
+library(nlme)
+fit5a <- lme(MathAch ~ SES + Sex + Minority, random = ~1|School, data = MathAchieve)
+summary(fit5a)
+
+library(lme4)
+fit5b <- lmer(MathAch ~ SES + Sex + Minority + (1|School), data = MathAchieve)
+summary(fit5b)
+
+# Compare estimates of the fixed effects:
+summary(fit5a)$tTable
+summary(fit5b)$coef
+```
+
+## Mixed models: random intercept, random slope
+
+```{r}
+fit6a <- lme(MathAch ~ SES + Sex + Minority, random = ~SES|School, data = MathAchieve)
+summary(fit6a)
+
+fit6b <- lmer(MathAch ~ SES + Sex + Minority + (SES|School), data = MathAchieve)
+summary(fit6b)
+```
+
+## Mixed models: ICC
+
+```{r}
+#install.packages("psychometric")
+library(psychometric)
+ICC1.lme(dv = MathAch, grp = School, data = MathAchieve)
+
+# by hand:
+summary(lme(MathAch ~ 1, random = ~1|School, data = MathAchieve))
+2.934966^2 / (2.934966^2 + 6.256862^2)
+```
+
+## Incorporating context variables (= macro variables)
+
+```{r}
+fit7 <- lme(MathAch ~ SES + Sex + Minority + MEANSES, random = ~1|School, data = MathAchieve)
+summary(fit7)
+```
+
+## Predict school specific effects of SES on MathAch
+
+```{r}
+library(ggplot2)
+
+###################################################################
+# Model 1:
+
+fit8a <- lme(MathAch ~ SES, random = ~1|School, data = MathAchieve)
+pred.fit8a <- predict(fit8a)
+
+summary(fit8a)
+head(MathAchieve)
+head(pred.fit8a)
+
+# Prediction of first student just using fixed effects:
+12.657480 + 2.390196 * (-1.528)
+# the difference between this and the predicted value from predic() is the random intercept term for the first school
+```
+
+```{r}
+# Different visualizations:
+
+ggplot(MathAchieve, aes(x = SES, y = MathAch)) +
+  geom_point(size = 0.1) +
+  geom_line(aes(y = pred.fit8a, group = School))
+
+ggplot(MathAchieve, aes(x = SES, y = MathAch)) +
+  geom_line(aes(y = pred.fit8a, group = School, colour = School)) + 
+  theme(legend.position = "none")
+```
+
+
+```{r}
+###################################################################
+# Model 2:
+
+fit8b <- lme(MathAch ~ SES, random = ~SES|School, data = MathAchieve)
+pred.fit8b <- predict(fit8b)
+
+ggplot(MathAchieve, aes(x = SES, y = MathAch)) +
+  geom_line(aes(y = pred.fit8b, group = School, colour = School)) + 
+  theme(legend.position = "none")
+
+# -> compare with the plots of the actual math grades of the single schools!
+# this shows the effect of the weighting of the overall effect and the school-specific observations
+```
+
+```{r}
+###################################################################
+# Model 3:
+fit8c <- lme(MathAch ~ SES + MEANSES, random = ~SES|School, data = MathAchieve)
+pred.fit8c <- predict(fit8c)
+
+ggplot(MathAchieve, aes(x = SES, y = MathAch, colour = MEANSES)) +
+  geom_line(aes(y = pred.fit8c, group = School)) 
+```

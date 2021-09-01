@@ -1,0 +1,75 @@
+---
+title: "Exercises 3a"
+author: "Stefan Konigorski"
+date: "November 4, 2019"
+output:
+  html_document: default
+---
+
+## Exercise 1: Compute frequency tables in NoShow dataset
+
+```{r}
+# Load data
+load(file = url("https://www.dropbox.com/s/32pyh375kjkqv14/NoShowdata.RData?dl=1"))
+
+# Show the header of the data
+# options(dplyr.width = Inf) # to show all columns
+head(NoShowdata)
+
+# Question 1: Which relevant variables are measured on a nominal scale?
+
+# Question 2: Compute absolute and relative frequencies of these relevant nominal variables 
+
+# Meaning?
+# -> See also https://www.kaggle.com/joniarroba/noshowappointments
+
+# Compute relative frequencies of the nominal variables
+```
+
+
+```{r}
+# Question 3: Compute 2-way frequency tables of each variable with the NoShow variable (cross-tab, contingency table)
+
+```
+
+```{r}
+# Question 4: Export these tables to xlsx files.
+
+```
+
+## Exercise 2: Compute frequency plots in the NoShow dataset and save them
+
+```{r}
+# Load data
+load(file = url("https://www.dropbox.com/s/32pyh375kjkqv14/NoShowdata.RData?dl=1"))
+
+# Compute barplots and mosaicplots of the No-Show variable as well as of other variables.
+
+# Save these plots as pdf and jpeg files.
+
+```
+
+# Exercise 3: Descriptive statistics of ordinal and metric variables
+
+```{r}
+# Load data
+load(file = url("https://www.dropbox.com/s/j50z4e17l5aabk8/Pima_diabetes.RData?dl=1"))
+Pima_diabetes$Diabetes <- factor(Pima_diabetes$Outcome, labels = c("no", "yes"))
+
+# Look at data
+head(Pima_diabetes)
+
+# Descriptive statistics of BMI: compute min, max, range, median, mad, mean, sd, variance, skewness and kurtosis of BMI
+
+# Compute mean of BMI stratified by diabetes and stratified by Pregnancies using the 'tapply' function
+```
+
+# Exercise 4: Plots of ordinal and metric variables
+
+```{r}
+# Load data
+load(file = url("https://www.dropbox.com/s/j50z4e17l5aabk8/Pima_diabetes.RData?dl=1"))
+Pima_diabetes$Diabetes <- factor(Pima_diabetes$Outcome, labels = c("no", "yes"))
+
+# Generate a histogram, boxplot, scatterplot, and normal quantile-quantile plot of BMI.
+```

@@ -1,0 +1,123 @@
+---
+title: "Examples 2 - properties of estimators"
+author: "Stefan Konigorski"
+date: "November 18, 2019"
+output:
+  html_document: default
+---
+
+##  Property: unbiasedness
+
+Question: 
+
+* Is $\frac{1}{n}\sum_{i=1}^n (X_i - \bar{X})^2$ an unbiased estimate of the variance? 
+* Is $\frac{1}{n-1}\sum_{i=1}^n (X_i - \bar{X})^2$ an unbiased estimate of the variance?
+
+```{r}
+# Example: normally distributed data with expected value 0
+# Step 1: Generate the population of the variable X, as a standard normal distribution with expected value 0 and variance 1. 
+set.seed(7)
+X <- rnorm(n = 1000, mean = 0, sd = 1)
+var(X)
+hist(X)
+
+# Step 2: Draw a random sample X_sample_i of 100 values from the population of X, and compute both estimates of the variance of X. Do this 1000 times.
+var_n <- var_n_1 <- NULL
+for(i in 1:1000){
+  #print(i)
+  X_sample_i <- sample(X, size = 100, replace = FALSE)
+  var_n[i] <- var(X_sample_i)*(100-1)/100
+  var_n_1[i] <- var(X_sample_i)
+}
+
+# Results
+mean(var_n)
+mean(var_n_1)
+
+# Visualize
+par(mfrow = c(1,2))
+hist(var_n)
+hist(var_n_1)
+```
+
+Conclusion: This is an empirical illustration of the theoretical knowledge that $\frac{1}{n-1}\sum_{i=1}^n (X_i - \bar{X})^2$ is an unbiased estimate of the variance, but $\frac{1}{n}\sum_{i=1}^n (X_i - \bar{X})^2$ is not.
+
+## Property: efficiency
+
+Questions: 
+
+* As estimates of the expected value $\mu$, does the mean or the median have smaller variance?
+* I.e. which estimator is more efficient?
+* Is is always the case?
+
+```{r}
+# Example 1: normally distributed data with expected value 0
+# Step 1: Generate the population of the variable X, as a standard normal distribution with expected value 0 and variance 1. 
+set.seed(3)
+X <- rnorm(n = 100000, mean = 0, sd = 1)
+mean(X)
+par(mfrow = c(1,1))
+hist(X)
+
+# Step 2: Draw a random sample X_sample_i of 100 values from the population of X, compute the mean and median as estimates of the expected value of X. Do this 1000 times.
+mean_est <- median_est <- NULL
+for(i in 1:1000){
+  #print(i)
+  X_sample_i <- sample(X, size = 100, replace = FALSE)
+  mean_est[i] <- mean(X_sample_i)
+  median_est[i] <- median(X_sample_i)
+}
+
+# Is one of them more efficient? ie how much do the estimators vary around the true expected value? For this: compute the mean square error (MSE) between the estimate and the true value of the expected value (theoretically 0):
+mean((mean_est - mean(X))^2)
+mean((median_est - mean(X))^2)
+# -> mean is more efficient.
+# In addition, not only do the mean estimators vary less around the true mean(X), but they also have a smaller variance:
+var(mean_est)
+var(median_est)
+
+# Visualize
+par(mfrow = c(1,2))
+hist(mean_est)
+hist(median_est)
+```
+
+```{r}
+# Example 2: skewed data
+# Step 1: Generate the population of the variable X, as an exponentially-distributed variable with expected value 1.
+set.seed(3)
+X <- rexp(n = 100000, rate = 1)
+mean(X)
+par(mfrow = c(1,1))
+hist(X)
+
+# Step 2: Draw a random sample X_sample_i of 100 values from the population of X, compute the mean and median as estimates of the expected value of X. Do this 1000 times.
+mean_est <- median_est <- NULL
+for(i in 1:1000){
+  #print(i)
+  X_sample_i <- sample(X, size = 100, replace = FALSE)
+  mean_est[i] <- mean(X_sample_i)
+  median_est[i] <- median(X_sample_i)
+}
+
+# Is one of them more efficient? ie how much do the estimators vary around the true expected value? Compute the mean square error (MSE) between the estimate and the true value of the expected value (theoretically 1):
+mean((mean_est - mean(X))^2)
+mean((median_est - mean(X))^2)
+# -> Mean is slightly better, ie mean gives the more efficient estimator for the true expected value.
+# On the other hand, the median estimator varies less:
+var(mean_est)
+var(median_est)
+# and also is a more efficient estimator of the median(X)
+mean((mean_est - median(X))^2)
+mean((median_est - median(X))^2)
+#### -> Conclusion: depending on your criterion, you might get to the conclusion that mean is better or that median is better, there is no clear overall favourite here for skewed data.
+
+# Visualize
+par(mfrow = c(1,2))
+hist(mean_est)
+hist(median_est)
+```
+
+Conclusion: The mean is an efficient estimate for normally-distributed data, the median is more efficient for skewed data.
+
+But: there might also be better estimators (than the median) for skewed data!

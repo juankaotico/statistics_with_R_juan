@@ -1,0 +1,28 @@
+---
+title: "Exercise 1: Correlation"
+author: "Stefan Konigorski"
+date: "December 9, 2019"
+output:
+  html_document: default
+---
+
+## Load KiGGS data
+
+```{r}
+#dat_link <- url("https://www.dropbox.com/s/nbh0f6upejh7nr8/data.RData?dl=1")
+#load(dat_link)
+load("C:/Users/stefan.konigorski/Desktop/data_Teaching/KiGGS/KiGGS03_06.RData")
+dat <- KiGGS03_06
+```
+
+## Correlation
+
+Choose 5 different variables and compute pairwise different correlation coefficients. Also look at scatterplots of the variables.
+
+Also try to use the cor and plot for all 5 variables at once.
+
+```{r}
+...
+```
+
+Look at the results (correlation coefficients, confidence intervals, hypothesis tests), compare and interpret them.

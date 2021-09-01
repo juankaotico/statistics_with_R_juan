@@ -1,0 +1,45 @@
+---
+title: "Homework 3"
+author: "Stefan Konigorski"
+date: "November 4, 2019"
+output:
+  html_document: default
+---
+
+Download this R Markdown file, save it on your computer, and perform all the below tasks by inserting your answer in text or by inserting R chunks below. After you are done, upload this file with your solutions on Moodle.
+
+## Exercise 1: Compute frequencies in the Pima diabetes dataset
+
+Load the Pima diabetes dataset:
+
+```{r}
+load(file = url("https://www.dropbox.com/s/j50z4e17l5aabk8/Pima_diabetes.RData?dl=1"))
+```
+
+Which variables are measured on a nominal level?
+
+Now compute frequency tables, barplots, and mosaic plots of all nominal variables in the dataset.
+
+Next, create a variable which describes whether a woman had more or less than 4 pregnancies. Then, use this variable to create a 2x2 table with diabetes outcome. Do you see an indication of whether the number of pregnancies is associated with diabetes prevalence? Do you think your investigation is a good way to investigate this?
+
+## Exercise 2: Generate a table with descriptive statistics
+
+Use any dataset (a dataset that you have worked with in the past, or that you are currently working with, a dataset that is available on Blackboard, in R or that you have downloaded from the internet), and generate a table with descriptive statistics of the main variables of interest.
+
+## Exercise 3: Plots using ggplot2
+
+Load the NoShow dataset:
+
+```{r}
+load(file = url("https://www.dropbox.com/s/32pyh375kjkqv14/NoShowdata.RData?dl=1"))
+head(NoShowdata)
+```
+
+Use ggplot2 to generate the following plots:
+
+- Create a boxplots of Age (stratified) by neighborhood.
+- Create a histogram of Age.
+- Create a histogram of Age, stratified by whether the person showed up - in one panel using the or in multiple panels.
+- Stratify this plot further by gender.
+
+What insights can you get from these plots? For which goal would you create these plots?

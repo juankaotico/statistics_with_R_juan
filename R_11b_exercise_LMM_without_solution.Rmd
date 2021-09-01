@@ -1,0 +1,67 @@
+---
+title: "Linear mixed models in the MathAchieve dataset"
+author: "Stefan Konigorski"
+date: "January 13, 2020"
+output:
+  html_document: default
+---
+
+# Load and inspect MathAchieve dataset
+
+```{r}
+# install.packages("nlme")
+library(nlme)
+
+head(MathAchieve)
+str(MathAchieve)
+?nlme::MathAchieve
+
+table(MathAchieve$Minority)
+table(MathAchieve$Sex)
+
+hist(MathAchieve$SES)
+hist(MathAchieve$MathAch)
+hist(MathAchieve$MEANSES)
+
+length(unique(MathAchieve$MEANSES))
+length(unique(MathAchieve$School))
+
+summary(MathAchieve)
+```
+
+# Different models in the MathAchieve dataset
+
+```{r}
+# install.packages("nlme")
+library(nlme)
+```
+
+## Intercept-only model
+
+```{r}
+...
+```
+
+## Model with SES as predictor
+
+```{r}
+...
+```
+
+## Model with SES, Minority, Sex as predictors
+
+```{r}
+...
+```
+
+## Does school have an effect?
+
+```{r}
+...
+```
+
+## How can we consider school?
+
+```{r}
+...
+```

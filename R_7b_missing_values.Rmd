@@ -1,0 +1,667 @@
+---
+title: "How to deal with missing values"
+author: "Stefan Konigorski"
+date: "December 2, 2019"
+output:
+  html_document: default
+---
+
+## Overview
+
+Here, in the analysis, the aim is to investigate the association between the length of nightly sleep of children and their psychological wellbeing. 
+
+Both variables are quantitative variables. For the psychological wellbeing of children, the external rating by their parents is used (see R_7a_missing_values_intro_example.Rmd). The sleep variable is approx. normally distributed, the wellbeing variable is not normally distributed. Still, we will use the Pearson correlation coefficient for the analysis here (which is most well-suited for the analysis normally distributed variables). Therefore, the results have to be interpreted with some caution.
+
+In a first step, we will create datasets that have missing values according to different underlying mechanisms:
+
+1. Full dataset with all observations of sleep and wellbeing.
+2. Values of psychological wellbeing are deleted randomly (10\%, 50\%, 90\%) -> MCAR
+3. Values of psychological wellbeing are deleted (10\%, 50\%, 90\%) depending on values of physical wellbeing. -> MAR
+4. Values of psychological wellbeing are deleted (10\%, 50\%, 90\%) depending on values of psychological wellbeing itself. -> MNAR
+
+In the next step, we will analyze these different datasets with different methods dealing with the missing values, and we will investigate how biased the estimated correlations are, and if the results (power) of the hypothesis test changes.
+
+## Preparations
+
+Load KiGGS data:
+
+```{r}
+dat_link <- url("https://www.dropbox.com/s/nbh0f6upejh7nr8/data.RData?dl=1")
+load(dat_link)
+
+# Alternative: download data from Moodle, either (i) the raw .sav dataset (SPSS data file) which you need to import, or (ii) the already imported .RData file with:
+# load("C:/Users/stefan.konigorski/Desktop/data_Teaching/KiGGS/KiGGS03_06.RData")
+# (you need to adapt the path)
+
+dat <- KiGGS03_06
+```
+
+Overview of the variables:
+
+```{r}
+# sleep:
+str(dat$e065z)
+summary(dat$e065z)
+hist(as.numeric(as.character(dat$e065z)))
+
+# Psychological wellbeing of the children (external rating by parents)
+str(dat$pw100.e)
+summary(dat$pw100.e)
+hist(as.numeric(as.character(dat$pw100.e)))
+
+# Physical wellbeing of the children (external rating by parents)
+str(dat$kw100.e)
+summary(dat$kw100.e)
+hist(as.numeric(as.character(dat$kw100.e)))
+```
+
+## Create datasets
+
+```{r}
+# Full dataset:
+dat_complete <- data.frame(schlaf = as.numeric(as.character(dat$e065z)), 
+                           psy = as.numeric(as.character(dat$pw100.e)), 
+                           body = as.numeric(as.character(dat$kw100.e)))
+idx_complete <- complete.cases(dat_complete)
+dat_complete <- dat_complete[idx_complete, ]
+
+table(!is.na(dat_complete$psy))
+
+# Datasets in which 10%, 50%, 90% of the observations of psychological wellbeing are deleted randomly
+n_total <- dim(dat_complete)[1]
+
+set.seed(5)
+idx_MCAR_10 <- sample(1:n_total, size = 0.1*n_total, replace = FALSE)
+set.seed(5)
+idx_MCAR_50 <- sample(1:n_total, size = 0.5*n_total, replace = FALSE)
+set.seed(5)
+idx_MCAR_90 <- sample(1:n_total, size = 0.9*n_total, replace = FALSE)
+
+dat_MCAR_10 <- dat_MCAR_50 <- dat_MCAR_90 <- dat_complete
+dat_MCAR_10$psy[idx_MCAR_10] <- NA
+dat_MCAR_50$psy[idx_MCAR_50] <- NA
+dat_MCAR_90$psy[idx_MCAR_90] <- NA
+
+table(!is.na(dat_MCAR_10$psy))
+table(!is.na(dat_MCAR_50$psy))
+table(!is.na(dat_MCAR_90$psy))
+
+# Datasets in which 10%, 50%, 90% of the observations of psychological wellbeing are deleted depending on values of physical wellbeing.
+
+quantile(dat_complete$body, probs = c(0.1, 0.5, 0.9), na.rm = TRUE)
+
+idx_MAR_10 <- (dat_complete$body >= 100)
+idx_MAR_50 <- (dat_complete$body > 81.25)
+idx_MAR_90 <- (dat_complete$body >= 62.5)
+
+dat_MAR_10 <- dat_MAR_50 <- dat_MAR_90 <- dat_complete
+dat_MAR_10$psy[idx_MAR_10] <- NA
+dat_MAR_50$psy[idx_MAR_50] <- NA
+dat_MAR_90$psy[idx_MAR_90] <- NA
+
+table(!is.na(dat_MAR_10$psy))
+table(!is.na(dat_MAR_50$psy))
+table(!is.na(dat_MAR_90$psy))
+
+# Information on the association of physical and psychological wellbeing and sleep:
+cor(dat_complete$body, dat_complete$psy)
+cor(dat_complete$body, dat_complete$schlaf)
+
+# Datasets in which 10%, 50%, 90% of the observations of psychological wellbeing are deleted depending on the values of psychological wellbeing itself.
+
+quantile(dat_complete$psy, probs = c(0.1, 0.5, 0.9), na.rm = TRUE)
+
+idx_MNAR_10 <- (dat_complete$psy < 68.75)
+idx_MNAR_50 <- (dat_complete$psy < 87.50)
+idx_MNAR_90 <- (dat_complete$psy <= 93.75)
+
+dat_MNAR_10 <- dat_MNAR_50 <- dat_MNAR_90 <- dat_complete
+dat_MNAR_10$psy[idx_MNAR_10] <- NA
+dat_MNAR_50$psy[idx_MNAR_50] <- NA
+dat_MNAR_90$psy[idx_MNAR_90] <- NA
+
+table(!is.na(dat_MNAR_10$psy))
+table(!is.na(dat_MNAR_50$psy))
+table(!is.na(dat_MNAR_90$psy))
+```
+
+## Ground Truth: true correlation (=measure of association), 95% confidence interval, and p-value of hypothesis test
+
+```{r}
+res0 <- cor.test(dat_complete$schlaf, dat_complete$psy, method = "pearson")
+res0$estimate
+res0$conf.int
+res0$p.value
+```
+
+## Analysis of the different datasets with missing values
+
+### Complete-Case analysis
+
+```{r}
+# MCAR:
+res1_10 <- cor.test(dat_MCAR_10$schlaf, dat_MCAR_10$psy, method = "pearson")
+res1_10$estimate
+res1_10$conf.int
+res1_10$p.value
+
+res1_50 <- cor.test(dat_MCAR_50$schlaf, dat_MCAR_50$psy, method = "pearson")
+res1_50$estimate
+res1_50$conf.int
+res1_50$p.value
+
+res1_90 <- cor.test(dat_MCAR_90$schlaf, dat_MCAR_90$psy, method = "pearson")
+res1_90$estimate
+res1_90$conf.int
+res1_90$p.value
+```
+
+Conclusion: Unbiased estimates, confidence intervals are wider, the more missing values there are (sample size of analysis is getting smaller).
+
+```{r}
+# MAR:
+res2_10 <- cor.test(dat_MAR_10$schlaf, dat_MAR_10$psy, method = "pearson")
+res2_10$estimate
+res2_10$conf.int
+res2_10$p.value
+
+res2_50 <- cor.test(dat_MAR_50$schlaf, dat_MAR_50$psy, method = "pearson")
+res2_50$estimate
+res2_50$conf.int
+res2_50$p.value
+
+res2_90 <- cor.test(dat_MAR_90$schlaf, dat_MAR_90$psy, method = "pearson")
+res2_90$estimate
+res2_90$conf.int
+res2_90$p.value
+```
+
+Conclusion: Biased estimates - the more missing values, the more biased. Also, the confidence intervals are getting wider with increasing number of missing values.
+
+```{r}
+# MNAR:
+res3_10 <- cor.test(dat_MNAR_10$schlaf, dat_MNAR_10$psy, method = "pearson")
+res3_10$estimate
+res3_10$conf.int
+res3_10$p.value
+
+res3_50 <- cor.test(dat_MNAR_50$schlaf, dat_MNAR_50$psy, method = "pearson")
+res3_50$estimate
+res3_50$conf.int
+res3_50$p.value
+
+res3_90 <- cor.test(dat_MNAR_90$schlaf, dat_MNAR_90$psy, method = "pearson")
+res3_90$estimate
+res3_90$conf.int
+res3_90$p.value
+```
+
+Conclusion: Biased estimates - the more missing values, the more biased. Also, the confidence intervals are getting wider with increasing number of missing values.
+
+### Mean imputation
+
+```{r}
+# MCAR:
+mean(dat_MCAR_10$psy, na.rm = TRUE)
+dat_MCAR_10_mean <- dat_MCAR_10
+dat_MCAR_10_mean$psy[is.na(dat_MCAR_10_mean$psy)] <- mean(dat_MCAR_10_mean$psy, na.rm = TRUE)
+res1_10 <- cor.test(dat_MCAR_10_mean$schlaf, dat_MCAR_10_mean$psy, method = "pearson")
+res1_10$estimate
+res1_10$conf.int
+res1_10$p.value
+
+mean(dat_MCAR_50$psy, na.rm = TRUE)
+dat_MCAR_50_mean <- dat_MCAR_50
+dat_MCAR_50_mean$psy[is.na(dat_MCAR_50_mean$psy)] <- mean(dat_MCAR_50_mean$psy, na.rm = TRUE)
+res1_50 <- cor.test(dat_MCAR_50_mean$schlaf, dat_MCAR_50_mean$psy, method = "pearson")
+res1_50$estimate
+res1_50$conf.int
+res1_50$p.value
+
+mean(dat_MCAR_90$psy, na.rm = TRUE)
+dat_MCAR_90_mean <- dat_MCAR_90
+dat_MCAR_90_mean$psy[is.na(dat_MCAR_90_mean$psy)] <- mean(dat_MCAR_90_mean$psy, na.rm = TRUE)
+res1_90 <- cor.test(dat_MCAR_90_mean$schlaf, dat_MCAR_90_mean$psy, method = "pearson")
+res1_90$estimate
+res1_90$conf.int
+res1_90$p.value
+```
+
+Conclusion: ...
+
+```{r}
+# MAR:
+mean(dat_MAR_10$psy, na.rm = TRUE)
+dat_MAR_10_mean <- dat_MAR_10
+dat_MAR_10_mean$psy[is.na(dat_MAR_10_mean$psy)] <- mean(dat_MAR_10_mean$psy, na.rm = TRUE)
+res2_10 <- cor.test(dat_MAR_10_mean$schlaf, dat_MAR_10_mean$psy, method = "pearson")
+res2_10$estimate
+res2_10$conf.int
+res2_10$p.value
+
+mean(dat_MAR_50$psy, na.rm = TRUE)
+dat_MAR_50_mean <- dat_MAR_50
+dat_MAR_50_mean$psy[is.na(dat_MAR_50_mean$psy)] <- mean(dat_MAR_50_mean$psy, na.rm = TRUE)
+res2_50 <- cor.test(dat_MAR_50_mean$schlaf, dat_MAR_50_mean$psy, method = "pearson")
+res2_50$estimate
+res2_50$conf.int
+res2_50$p.value
+
+mean(dat_MAR_90$psy, na.rm = TRUE)
+dat_MAR_90_mean <- dat_MAR_90
+dat_MAR_90_mean$psy[is.na(dat_MAR_90_mean$psy)] <- mean(dat_MAR_90_mean$psy, na.rm = TRUE)
+res2_90 <- cor.test(dat_MAR_90_mean$schlaf, dat_MAR_90_mean$psy, method = "pearson")
+res2_90$estimate
+res2_90$conf.int
+res2_90$p.value
+```
+
+Conclusion: ...
+
+```{r}
+# MNAR:
+mean(dat_MNAR_10$psy, na.rm = TRUE)
+dat_MNAR_10_mean <- dat_MNAR_10
+dat_MNAR_10_mean$psy[is.na(dat_MNAR_10_mean$psy)] <- mean(dat_MNAR_10_mean$psy, na.rm = TRUE)
+res3_10 <- cor.test(dat_MNAR_10_mean$schlaf, dat_MNAR_10_mean$psy, method = "pearson")
+res3_10$estimate
+res3_10$conf.int
+res3_10$p.value
+
+mean(dat_MNAR_50$psy, na.rm = TRUE)
+dat_MNAR_50_mean <- dat_MNAR_50
+dat_MNAR_50_mean$psy[is.na(dat_MNAR_50_mean$psy)] <- mean(dat_MNAR_50_mean$psy, na.rm = TRUE)
+res3_50 <- cor.test(dat_MNAR_50_mean$schlaf, dat_MNAR_50_mean$psy, method = "pearson")
+res3_50$estimate
+res3_50$conf.int
+res3_50$p.value
+
+mean(dat_MNAR_90$psy, na.rm = TRUE)
+dat_MNAR_90_mean <- dat_MNAR_90
+dat_MNAR_90_mean$psy[is.na(dat_MNAR_90_mean$psy)] <- mean(dat_MNAR_90_mean$psy, na.rm = TRUE)
+res3_90 <- cor.test(dat_MNAR_90_mean$schlaf, dat_MNAR_90_mean$psy, method = "pearson")
+res3_90$estimate
+res3_90$conf.int
+res3_90$p.value
+```
+
+Conclusion: ...
+
+### Median imputation
+
+```{r}
+# MCAR:
+median(dat_MCAR_10$psy, na.rm = TRUE)
+dat_MCAR_10_median <- dat_MCAR_10
+dat_MCAR_10_median$psy[is.na(dat_MCAR_10_median$psy)] <- median(dat_MCAR_10_median$psy, na.rm = TRUE)
+res1_10 <- cor.test(dat_MCAR_10_median$schlaf, dat_MCAR_10_median$psy, method = "pearson")
+res1_10$estimate
+res1_10$conf.int
+res1_10$p.value
+
+median(dat_MCAR_50$psy, na.rm = TRUE)
+dat_MCAR_50_median <- dat_MCAR_50
+dat_MCAR_50_median$psy[is.na(dat_MCAR_50_median$psy)] <- median(dat_MCAR_50_median$psy, na.rm = TRUE)
+res1_50 <- cor.test(dat_MCAR_50_median$schlaf, dat_MCAR_50_median$psy, method = "pearson")
+res1_50$estimate
+res1_50$conf.int
+res1_50$p.value
+
+median(dat_MCAR_90$psy, na.rm = TRUE)
+dat_MCAR_90_median <- dat_MCAR_90
+dat_MCAR_90_median$psy[is.na(dat_MCAR_90_median$psy)] <- median(dat_MCAR_90_median$psy, na.rm = TRUE)
+res1_90 <- cor.test(dat_MCAR_90_median$schlaf, dat_MCAR_90_median$psy, method = "pearson")
+res1_90$estimate
+res1_90$conf.int
+res1_90$p.value
+```
+
+Conclusion: ...
+
+```{r}
+# MAR:
+median(dat_MAR_10$psy, na.rm = TRUE)
+dat_MAR_10_median <- dat_MAR_10
+dat_MAR_10_median$psy[is.na(dat_MAR_10_median$psy)] <- median(dat_MAR_10_median$psy, na.rm = TRUE)
+res2_10 <- cor.test(dat_MAR_10_median$schlaf, dat_MAR_10_median$psy, method = "pearson")
+res2_10$estimate
+res2_10$conf.int
+res2_10$p.value
+
+median(dat_MAR_50$psy, na.rm = TRUE)
+dat_MAR_50_median <- dat_MAR_50
+dat_MAR_50_median$psy[is.na(dat_MAR_50_median$psy)] <- median(dat_MAR_50_median$psy, na.rm = TRUE)
+res2_50 <- cor.test(dat_MAR_50_median$schlaf, dat_MAR_50_median$psy, method = "pearson")
+res2_50$estimate
+res2_50$conf.int
+res2_50$p.value
+
+median(dat_MAR_90$psy, na.rm = TRUE)
+dat_MAR_90_median <- dat_MAR_90
+dat_MAR_90_median$psy[is.na(dat_MAR_90_median$psy)] <- median(dat_MAR_90_median$psy, na.rm = TRUE)
+res2_90 <- cor.test(dat_MAR_90_median$schlaf, dat_MAR_90_median$psy, method = "pearson")
+res2_90$estimate
+res2_90$conf.int
+res2_90$p.value
+```
+
+Conclusion: ...
+
+```{r}
+# MNAR:
+median(dat_MNAR_10$psy, na.rm = TRUE)
+dat_MNAR_10_median <- dat_MNAR_10
+dat_MNAR_10_median$psy[is.na(dat_MNAR_10_median$psy)] <- median(dat_MNAR_10_median$psy, na.rm = TRUE)
+res3_10 <- cor.test(dat_MNAR_10_median$schlaf, dat_MNAR_10_median$psy, method = "pearson")
+res3_10$estimate
+res3_10$conf.int
+res3_10$p.value
+
+median(dat_MNAR_50$psy, na.rm = TRUE)
+dat_MNAR_50_median <- dat_MNAR_50
+dat_MNAR_50_median$psy[is.na(dat_MNAR_50_median$psy)] <- median(dat_MNAR_50_median$psy, na.rm = TRUE)
+res3_50 <- cor.test(dat_MNAR_50_median$schlaf, dat_MNAR_50_median$psy, method = "pearson")
+res3_50$estimate
+res3_50$conf.int
+res3_50$p.value
+
+median(dat_MNAR_90$psy, na.rm = TRUE)
+dat_MNAR_90_median <- dat_MNAR_90
+dat_MNAR_90_median$psy[is.na(dat_MNAR_90_median$psy)] <- median(dat_MNAR_90_median$psy, na.rm = TRUE)
+res3_90 <- cor.test(dat_MNAR_90_median$schlaf, dat_MNAR_90_median$psy, method = "pearson")
+res3_90$estimate
+res3_90$conf.int
+res3_90$p.value
+```
+
+Conclusion: ...
+
+### Regression-based imputation
+
+```{r}
+# MCAR:
+reg_1_10 <- lm(psy ~ body, data = dat_MCAR_10)
+dat_MCAR_10_reg <- dat_MCAR_10
+dat_MCAR_10_reg$psy[is.na(dat_MCAR_10_reg$psy)] <- coef(reg_1_10)[1] + coef(reg_1_10)[2] * dat_MCAR_10_reg$body[is.na(dat_MCAR_10_reg$psy)]
+res1_10 <- cor.test(dat_MCAR_10_reg$schlaf, dat_MCAR_10_reg$psy, method = "pearson")
+res1_10$estimate
+res1_10$conf.int
+res1_10$p.value
+
+reg_1_50 <- lm(psy ~ body, data = dat_MCAR_50)
+dat_MCAR_50_reg <- dat_MCAR_50
+dat_MCAR_50_reg$psy[is.na(dat_MCAR_50_reg$psy)] <- coef(reg_1_50)[1] + coef(reg_1_50)[2] * dat_MCAR_50_reg$body[is.na(dat_MCAR_50_reg$psy)]
+res1_50 <- cor.test(dat_MCAR_50_reg$schlaf, dat_MCAR_50_reg$psy, method = "pearson")
+res1_50$estimate
+res1_50$conf.int
+res1_50$p.value
+
+reg_1_90 <- lm(psy ~ body, data = dat_MCAR_90)
+dat_MCAR_90_reg <- dat_MCAR_90
+dat_MCAR_90_reg$psy[is.na(dat_MCAR_90_reg$psy)] <- coef(reg_1_90)[1] + coef(reg_1_90)[2] * dat_MCAR_90_reg$body[is.na(dat_MCAR_90_reg$psy)]
+res1_90 <- cor.test(dat_MCAR_90_reg$schlaf, dat_MCAR_90_reg$psy, method = "pearson")
+res1_90$estimate
+res1_90$conf.int
+res1_90$p.value
+```
+
+Conclusion: ...
+
+```{r}
+# MAR:
+reg_2_10 <- lm(psy ~ body, data = dat_MAR_10)
+dat_MAR_10_reg <- dat_MAR_10
+dat_MAR_10_reg$psy[is.na(dat_MAR_10_reg$psy)] <- coef(reg_2_10)[1] + coef(reg_2_10)[2] * dat_MAR_10_reg$body[is.na(dat_MAR_10_reg$psy)]
+res2_10 <- cor.test(dat_MAR_10_reg$schlaf, dat_MAR_10_reg$psy, method = "pearson")
+res2_10$estimate
+res2_10$conf.int
+res2_10$p.value
+
+reg_2_50 <- lm(psy ~ body, data = dat_MAR_50)
+dat_MAR_50_reg <- dat_MAR_50
+dat_MAR_50_reg$psy[is.na(dat_MAR_50_reg$psy)] <- coef(reg_2_50)[1] + coef(reg_2_50)[2] * dat_MAR_50_reg$body[is.na(dat_MAR_50_reg$psy)]
+res2_50 <- cor.test(dat_MAR_50_reg$schlaf, dat_MAR_50_reg$psy, method = "pearson")
+res2_50$estimate
+res2_50$conf.int
+res2_50$p.value
+
+reg_2_90 <- lm(psy ~ body, data = dat_MAR_90)
+dat_MAR_90_reg <- dat_MAR_90
+dat_MAR_90_reg$psy[is.na(dat_MAR_90_reg$psy)] <- coef(reg_2_90)[1] + coef(reg_2_90)[2] * dat_MAR_90_reg$body[is.na(dat_MAR_90_reg$psy)]
+res2_90 <- cor.test(dat_MAR_90_reg$schlaf, dat_MAR_90_reg$psy, method = "pearson")
+res2_90$estimate
+res2_90$conf.int
+res2_90$p.value
+```
+
+Conclusion: ...
+
+```{r}
+# MNAR:
+reg_3_10 <- lm(psy ~ body, data = dat_MNAR_10)
+dat_MNAR_10_reg <- dat_MNAR_10
+dat_MNAR_10_reg$psy[is.na(dat_MNAR_10_reg$psy)] <- coef(reg_3_10)[1] + coef(reg_3_10)[2] * dat_MNAR_10_reg$body[is.na(dat_MNAR_10_reg$psy)]
+res3_10 <- cor.test(dat_MNAR_10_reg$schlaf, dat_MNAR_10_reg$psy, method = "pearson")
+res3_10$estimate
+res3_10$conf.int
+res3_10$p.value
+
+reg_3_50 <- lm(psy ~ body, data = dat_MNAR_50)
+dat_MNAR_50_reg <- dat_MNAR_50
+dat_MNAR_50_reg$psy[is.na(dat_MNAR_50_reg$psy)] <- coef(reg_3_50)[1] + coef(reg_3_50)[2] * dat_MNAR_50_reg$body[is.na(dat_MNAR_50_reg$psy)]
+res3_50 <- cor.test(dat_MNAR_50_reg$schlaf, dat_MNAR_50_reg$psy, method = "pearson")
+res3_50$estimate
+res3_50$conf.int
+res3_50$p.value
+
+reg_3_90 <- lm(psy ~ body, data = dat_MNAR_90)
+dat_MNAR_90_reg <- dat_MNAR_90
+dat_MNAR_90_reg$psy[is.na(dat_MNAR_90_reg$psy)] <- coef(reg_3_90)[1] + coef(reg_3_90)[2] * dat_MNAR_90_reg$body[is.na(dat_MNAR_90_reg$psy)]
+res3_90 <- cor.test(dat_MNAR_90_reg$schlaf, dat_MNAR_90_reg$psy, method = "pearson")
+res3_90$estimate
+res3_90$conf.int
+res3_90$p.value
+```
+
+Conclusion: ...
+
+### Multiple imputation using mice
+
+```{r}
+# install.packages("mice")
+library(mice)
+
+# Pattern of missing values
+md.pattern(dat_MCAR_10)
+
+# Nice visualization of missing values in the VIM package, can be useful to identify patterns of missing values
+# install.packages("VIM")
+library(VIM)
+aggr(dat_MCAR_10, col = c('navyblue','red'), numbers = TRUE, sortVars = TRUE, labels = names(dat_MCAR_10), cex.axis = 0.7, gap = 3, ylab = c("Histogram of missing data", "Pattern"))
+
+# Other example how to apply the function
+aggr(dat[, 100:110])
+```
+
+```{r, include = FALSE}
+# Step 1: Do imputation of missing values, generate 5 imputed datasets
+tempData <- mice(dat_MCAR_10, m = 5, maxit = 5, meth = 'pmm', seed = 500)
+?mice
+```
+
+```{r}
+# Summary of the imputation
+summary(tempData)
+
+# The 5 imputed datasets can be extracted as follows:
+completedData1 <- complete(tempData,1)
+completedData2 <- complete(tempData,2)
+completedData3 <- complete(tempData,3)
+completedData4 <- complete(tempData,4)
+completedData5 <- complete(tempData,5)
+
+# Visualization of the distribution of the imputed variable psy
+mice::densityplot(tempData)
+
+# Step 2: Do the statistical analysis using the "with" function
+modelFit1 <- with(tempData, cor(psy, schlaf, method = "pearson"))
+
+# The estimate of the correlation can also be calculated by hand:
+mean(unlist(modelFit1$analyses))
+
+# Alternatively, you can use the cor.test function, which also computes confidence intervals
+with(tempData, cor.test(psy, schlaf, method = "pearson"))
+
+# Step 3: Pool results
+# This can be done using the "pool" function in the mice package, where dfcom are the degrees of freedom of the separate analyses of the imputed datasets, which are also shown in the cor.test output. eg:
+# summary(pool(modelFit1), dfcom = 7557)
+# However, the pooling of the correlations i.e. the extraction of the relevant information is not readily available in the pool function, so that this gives an error here.
+
+# For regression it works, e.g. using:
+modelFit1 <- with(tempData, lm(psy ~ schlaf))
+summary(pool(modelFit1), dfcom = 7557)
+
+# For correlations you can do this by hand, e.g. by extracting the estimators and their standard errors from the results, for the pooling,
+# e.g. do something like modelFit1_for_pool <- list(est = ..., SE = ...)
+
+# Simpler: use the miceadds package:
+# install.packages("miceadds")
+library(miceadds)
+```
+
+```{r, include = FALSE}
+tempData <- mice(dat_MCAR_10, m = 5, maxit = 5, meth = 'pmm', seed = 500)
+```
+
+```{r}
+res <- miceadds::micombine.cor(mi.res = tempData, variables = c(1,2), conf.level = 0.95, method = "pearson")
+```
+
+```{r, include = FALSE}
+# In summary:
+library(mice)
+library(miceadds)
+
+tempData_1_10 <- mice(dat_MCAR_10, meth = 'pmm', seed = 500)
+tempData_1_50 <- mice(dat_MCAR_50, meth = 'pmm', seed = 500)
+tempData_1_90 <- mice(dat_MCAR_90, meth = 'pmm', seed = 500)
+tempData_2_10 <- mice(dat_MAR_10, meth = 'pmm', seed = 500)
+tempData_2_50 <- mice(dat_MAR_50, meth = 'pmm', seed = 500)
+tempData_2_90 <- mice(dat_MAR_90, meth = 'pmm', seed = 500)
+tempData_3_10 <- mice(dat_MNAR_10, meth = 'pmm', seed = 500)
+tempData_3_50 <- mice(dat_MNAR_50, meth = 'pmm', seed = 500)
+tempData_3_90 <- mice(dat_MNAR_90, meth = 'pmm', seed = 500)
+```
+
+```{r}
+# MCAR:
+res1_10 <- miceadds::micombine.cor(mi.res = tempData_1_10, variables = c(1,2), conf.level = 0.95, method = "pearson")
+res1_10$r[1]
+c(res1_10$lower95[1], res1_10$upper95[1]) #pooled 95% CI
+res1_10$p[1]
+
+res1_50 <- miceadds::micombine.cor(mi.res = tempData_1_50, variables = c(1,2), conf.level = 0.95, method = "pearson")
+res1_50$r[1]
+c(res1_50$lower95[1], res1_50$upper95[1]) #pooled 95% CI
+res1_50$p[1]
+
+res1_90 <- miceadds::micombine.cor(mi.res = tempData_1_90, variables = c(1,2), conf.level = 0.95, method = "pearson")
+res1_90$r[1]
+c(res1_90$lower95[1], res1_90$upper95[1]) #pooled 95% CI
+res1_90$p[1]
+
+# MAR:
+res2_10 <- miceadds::micombine.cor(mi.res = tempData_2_10, variables = c(1,2), conf.level = 0.95, method = "pearson")
+res2_10$r[1]
+c(res2_10$lower95[1], res2_10$upper95[1]) #pooled 95% CI
+res2_10$p[1]
+
+res2_50 <- miceadds::micombine.cor(mi.res = tempData_2_50, variables = c(1,2), conf.level = 0.95, method = "pearson")
+res2_50$r[1]
+c(res2_50$lower95[1], res2_50$upper95[1]) #pooled 95% CI
+res2_50$p[1]
+
+res2_90 <- miceadds::micombine.cor(mi.res = tempData_2_90, variables = c(1,2), conf.level = 0.95, method = "pearson")
+res2_90$r[1]
+c(res2_90$lower95[1], res2_90$upper95[1]) #pooled 95% CI
+res2_90$p[1]
+
+# MNAR:
+res3_10 <- miceadds::micombine.cor(mi.res = tempData_3_10, variables = c(1,2), conf.level = 0.95, method = "pearson")
+res3_10$r[1]
+c(res3_10$lower95[1], res3_10$upper95[1]) #pooled 95% CI
+res3_10$p[1]
+
+res3_50 <- miceadds::micombine.cor(mi.res = tempData_3_50, variables = c(1,2), conf.level = 0.95, method = "pearson")
+res3_50$r[1]
+c(res3_50$lower95[1], res3_50$upper95[1]) #pooled 95% CI
+res3_50$p[1]
+
+res3_90 <- miceadds::micombine.cor(mi.res = tempData_3_90, variables = c(1,2), conf.level = 0.95, method = "pearson")
+res3_90$r[1]
+c(res3_90$lower95[1], res3_90$upper95[1]) #pooled 95% CI
+res3_90$p[1]
+```
+
+```{r, include = FALSE}
+# Using Bayesian linear regression in the imputation:
+tempData_1_10 <- mice(dat_MCAR_10, meth = 'norm', seed = 500)
+tempData_1_50 <- mice(dat_MCAR_50, meth = 'norm', seed = 500)
+tempData_1_90 <- mice(dat_MCAR_90, meth = 'norm', seed = 500)
+tempData_2_10 <- mice(dat_MAR_10, meth = 'norm', seed = 500)
+tempData_2_50 <- mice(dat_MAR_50, meth = 'norm', seed = 500)
+tempData_2_90 <- mice(dat_MAR_90, meth = 'norm', seed = 500)
+tempData_3_10 <- mice(dat_MNAR_10, meth = 'norm', seed = 500)
+tempData_3_50 <- mice(dat_MNAR_50, meth = 'norm', seed = 500)
+tempData_3_90 <- mice(dat_MNAR_90, meth = 'norm', seed = 500)
+```
+
+```{r}
+# MCAR:
+res1_10 <- miceadds::micombine.cor(mi.res = tempData_1_10, variables = c(1,2), conf.level = 0.95, method = "pearson")
+res1_10$r[1]
+c(res1_10$lower95[1], res1_10$upper95[1]) #pooled 95% CI
+res1_10$p[1]
+
+res1_50 <- miceadds::micombine.cor(mi.res = tempData_1_50, variables = c(1,2), conf.level = 0.95, method = "pearson")
+res1_50$r[1]
+c(res1_50$lower95[1], res1_50$upper95[1]) #pooled 95% CI
+res1_50$p[1]
+
+res1_90 <- miceadds::micombine.cor(mi.res = tempData_1_90, variables = c(1,2), conf.level = 0.95, method = "pearson")
+res1_90$r[1]
+c(res1_90$lower95[1], res1_90$upper95[1]) #pooled 95% CI
+res1_90$p[1]
+
+# MAR:
+res2_10 <- miceadds::micombine.cor(mi.res = tempData_2_10, variables = c(1,2), conf.level = 0.95, method = "pearson")
+res2_10$r[1]
+c(res2_10$lower95[1], res2_10$upper95[1]) #pooled 95% CI
+res2_10$p[1]
+
+res2_50 <- miceadds::micombine.cor(mi.res = tempData_2_50, variables = c(1,2), conf.level = 0.95, method = "pearson")
+res2_50$r[1]
+c(res2_50$lower95[1], res2_50$upper95[1]) #pooled 95% CI
+res2_50$p[1]
+
+res2_90 <- miceadds::micombine.cor(mi.res = tempData_2_90, variables = c(1,2), conf.level = 0.95, method = "pearson")
+res2_90$r[1]
+c(res2_90$lower95[1], res2_90$upper95[1]) #pooled 95% CI
+res2_90$p[1]
+
+# MNAR:
+res3_10 <- miceadds::micombine.cor(mi.res = tempData_3_10, variables = c(1,2), conf.level = 0.95, method = "pearson")
+res3_10$r[1]
+c(res3_10$lower95[1], res3_10$upper95[1]) #pooled 95% CI
+res3_10$p[1]
+
+res3_50 <- miceadds::micombine.cor(mi.res = tempData_3_50, variables = c(1,2), conf.level = 0.95, method = "pearson")
+res3_50$r[1]
+c(res3_50$lower95[1], res3_50$upper95[1]) #pooled 95% CI
+res3_50$p[1]
+
+res3_90 <- miceadds::micombine.cor(mi.res = tempData_3_90, variables = c(1,2), conf.level = 0.95, method = "pearson")
+res3_90$r[1]
+c(res3_90$lower95[1], res3_90$upper95[1]) #pooled 95% CI
+res3_90$p[1]
+```

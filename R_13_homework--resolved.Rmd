@@ -1,0 +1,69 @@
+---
+title: "Homework 13"
+author: "Juan Carlos Niño"
+date: "February 02, 2020"
+output:
+  html_document: default
+---
+
+Download this R Markdown file, save it on your computer, and perform all the below tasks by inserting your answer in text or by inserting R chunks below. After you are done, upload this file with your solutions on Moodle.
+
+## Exercise 1: Survival analysis
+
+Choose one other provided dataset in the survival package (or any other suitable dataset) which contains time-to-event data. Use the survfit function to compute the Kaplan-Meier estimate of the survival function and plot it. Then choose a variable with 2 or more categories in the dataset and perform a log-rank test. Interpret the results: is there are difference in survival between the groups?
+
+
+# Load the survival package
+
+```{r}
+# install.packages("survival")
+library(survival)
+```
+
+# Survival analysis with the lung dataset
+
+```{r}
+# Let's look at the colon dataset provided in the survival package:
+
+dat <- lung
+head(dat)
+str(dat)
+str(dat$status)
+str(dat$sex)
+
+# in this dataset the status can be censored =1 or dead = 2.
+table(dat$status)
+```
+
+
+
+```{r}
+# compute the Kaplan Meier estimate of the survival function
+KM1 <- survfit(Surv(time, status) ~ 1, data = dat)
+
+# Look at the results (in table form)
+summary(KM1)
+
+# Look at the plot:
+plot(KM1, main = expression(paste("Kaplan-Meier-estimate ", hat(S)(t), " with 95% CI")), ylab = "Survival function", xlab = "Time in days")
+
+# Stratify this by sex (1=male, 2=female):
+KM2 <- survfit(Surv(time, status) ~ sex, data = dat)
+plot(KM2, main = expression(paste("Kaplan-Meier-estimate ", hat(S)(t), " stratified by sex")), ylab = "Survival function", xlab = "Time in days", lwd=2, col=1:2)
+legend(x="topright", col = 1:2, lwd = 2, legend=c("male", "female"))
+
+# Look at the results discriminated by sex (in table form)
+summary(KM2)
+summary(KM2)$table
+
+# perform log-rank test:
+logrank <- survdiff(Surv(time, status) ~ sex, data = dat)
+# results:
+logrank
+```
+
+
+# Interpretarion
+
+As seen in the curve the survival probability of male decrease faster compare to the female. In the table we can see that the median survival time for male is only 270 days compare to the 426 of the female. 
+The log-rank test with a p = 0.001, shows that this difference is stadistical significant.

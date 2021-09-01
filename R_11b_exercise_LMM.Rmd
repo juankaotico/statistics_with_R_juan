@@ -1,0 +1,112 @@
+---
+title: "Linear mixed models in the MathAchieve dataset - with solutions"
+author: "Stefan Konigorski"
+date: "January 13, 2020"
+output:
+  html_document: default
+---
+
+# Load and inspect MathAchieve dataset
+
+```{r}
+# install.packages("nlme")
+library(nlme)
+
+head(MathAchieve)
+str(MathAchieve)
+?nlme::MathAchieve
+
+table(MathAchieve$Minority)
+table(MathAchieve$Sex)
+
+hist(MathAchieve$SES)
+hist(MathAchieve$MathAch)
+hist(MathAchieve$MEANSES)
+
+length(unique(MathAchieve$MEANSES))
+length(unique(MathAchieve$School))
+
+summary(MathAchieve)
+```
+
+# Different models in the MathAchieve dataset
+
+```{r}
+# install.packages("nlme")
+library(nlme)
+```
+
+## Intercept-only model
+
+```{r}
+fit1 <- lm(MathAch ~ 1, data = MathAchieve)
+summary(fit1)
+
+pred1 <- predict(fit1)
+plot(pred1)
+plot(pred1); points(1:length(pred1), MathAchieve$MathAch)
+plot(pred1, MathAchieve$MathAch, xlab = "Predicted MathAch values", ylab = "Actual MathAch values")
+```
+
+## Model with SES as predictor
+
+```{r}
+fit2 <- lm(MathAch ~ SES, data = MathAchieve)
+summary(fit2)
+
+pred2 <- predict(fit2)
+plot(MathAchieve$SES, MathAchieve$MathAch, xlab = "SES", ylab = "MathAch")
+plot(pred2, MathAchieve$MathAch, xlab = "Predicted MathAch values", ylab = "Actual MathAch values")
+```
+
+## Model with SES, Minority, Sex as predictors
+
+```{r}
+fit3 <- lm(MathAch ~ SES + Sex + Minority, data = MathAchieve)
+summary(fit3)
+
+pred3 <- predict(fit3)
+plot(pred3, MathAchieve$MathAch, xlab = "Predicted MathAch values", ylab = "Actual MathAch values")
+```
+
+## Does school have an effect?
+
+```{r}
+head(MathAchieve)
+str(MathAchieve)
+
+length(levels(MathAchieve$School))
+
+# Look at association of SES and MathAch in different schools
+MathAchieve1 <- MathAchieve[MathAchieve$School %in% levels(MathAchieve$School)[1:16], ]
+MathAchieve2 <- MathAchieve[MathAchieve$School %in% levels(MathAchieve$School)[17:32], ]
+
+library(ggplot2)
+ggplot(MathAchieve1, aes(x = SES, y = MathAch)) + 
+  geom_point() +
+  geom_smooth(method = 'lm') +
+  facet_wrap( . ~ School, drop = FALSE)
+
+ggplot(MathAchieve2, aes(x = SES, y = MathAch)) + 
+  geom_point() +
+  geom_smooth(method = 'lm') +
+  facet_wrap( . ~ School, drop = FALSE)
+```
+
+## How can we consider school?
+
+```{r}
+# School as dummy variables
+
+fit4a <- lm(MathAch ~ SES + Sex + Minority + as.factor(as.numeric(School)), data = MathAchieve)
+summary(fit4a)
+anova(fit4a)
+
+# School as numeric variables
+
+fit4b <- lm(MathAch ~ SES + Sex + Minority + as.numeric(School), data = MathAchieve)
+summary(fit4b)
+anova(fit4b)
+
+# or in linear mixed models see next week
+```

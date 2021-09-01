@@ -1,0 +1,49 @@
+---
+title: "Survival analysis"
+author: "Stefan Konigorski"
+date: "January 27, 2020"
+output:
+  html_document: default
+---
+
+# Load the survival package
+
+```{r}
+# install.packages("survival")
+library(survival)
+```
+
+# Survival analysis with the colon dataset
+
+```{r}
+# Let's look at the colon dataset provided in the survival package:
+
+dat <- colon
+head(dat)
+str(dat)
+
+# there are two types of events in this dataset, recurrence and death. Let's only look at death, which is etype==2
+table(dat$etype)
+dat <- dat[dat$etype == 2,]
+```
+
+```{r}
+# compute the Kaplan Meier estimate of the survival function
+KM1 <- survfit(Surv(time, status) ~ 1, data = dat)
+
+# Look at the results (in table form)
+summary(KM1)
+
+# Look at the plot:
+plot(KM1, main = expression(paste("Kaplan-Meier-estimate ", hat(S)(t), " with 95% CI")), ylab = "Survival function", xlab = "Time")
+
+# Stratify this by sex (0=female, 1=male):
+KM2 <- survfit(Surv(time, status) ~ sex, data = dat)
+plot(KM2, main = expression(paste("Kaplan-Meier-estimate ", hat(S)(t), " stratified by sex")), ylab = "Survival function", xlab = "Time", lwd=2, col=1:2)
+legend(x="topright", col = 1:2, lwd = 2, legend=c("female", "male"))
+
+# perform log-rank test:
+logrank <- survdiff(Surv(time, status) ~ sex, data = dat)
+# results:
+logrank
+```

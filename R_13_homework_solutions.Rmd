@@ -1,0 +1,47 @@
+---
+title: "Homework 13 - solutions"
+author: "Stefan Konigorski"
+date: "January 27, 2020"
+output:
+  html_document: default
+---
+
+## Exercise 1: Survival analysis
+
+**Task:**
+
+Choose one other provided dataset in the survival package (or any other suitable dataset of interest) which contains time-to-event dataset. Use the survfit function to compute the Kaplan-Meier estimate of the survival function and plot it. Then choose a variable with 2 or more categories in the dataset and perform a log-rank test. Interpret the results: is there are difference in survival between the groups?
+
+**Solutions:** 
+
+Do a survival analysis of the 'diabetic' dataset in the survival package, which contains data on the outcome time-to-visual loss, in a sample of patients with diabetic retinopathy that were treated with two types of laser treatment.
+
+
+```{r}
+library(survival)
+dat <- diabetic
+
+# look at data:
+?diabetic
+head(dat)
+```
+
+```{r}
+# compute the Kaplan Meier estimate of the survival function
+KM1 <- survfit(Surv(time, status) ~ 1, data = dat)
+
+# Look at the results (in table form)
+summary(KM1)
+
+# Look at the plot:
+plot(KM1, main = expression(paste("Kaplan-Meier-estimate ", hat(S)(t), " with 95% CI")), ylab = "Survival function", xlab = "Time")
+
+# Stratify this by treatment:
+KM2 <- survfit(Surv(time, status) ~ laser, data = dat)
+plot(KM2, main = expression(paste("Kaplan-Meier-estimate ", hat(S)(t), " stratified by sex")), ylab = "Survival function", xlab = "Time", lwd=2, col=1:2)
+legend(x="topright", col = 1:2, lwd = 2, legend=c("xenon", "argon"))
+
+# perform log-rank test:
+survdiff(Surv(time, status) ~ laser, data = dat)
+# Interpretation: no effect of treatment on the outcome = time-to-visual loss.
+```
